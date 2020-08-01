@@ -16,3 +16,11 @@ EkScript doesn't compile to anything. EkScript compiler is basically a transpile
 4. EkScript's production mode is a compiler that compiles code to the respective platform.
 5. The BEST part is the interop. EkScript's interop with other programming languages is through a simple `*.d.es` definition file like in TypeScript. It's that simple.
 6. EkScript has many more features. Astras in EkScript will support native transpilation to other programming language.
+
+## EkScript Code Diagram:
+
+![EkScript Flow Chart](./assets/EkScriptFlowChart.png)
+
+## What's included?
+
+1. EkScript module bundler with Live-reload feature for all the platforms EkScript targets. The module bundler includes template for SSR rendering. SSR Rendering with in-built 
