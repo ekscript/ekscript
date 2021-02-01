@@ -1,0 +1,7 @@
+"hello" + 1;
+let a: int = 1, b: string, c = 1, d = true;
+const e = true, f: boolean;
+const g: boolean = e;
+let h: int = (1 + 2) ; 
+
+let i = "string";

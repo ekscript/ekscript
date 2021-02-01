@@ -1,0 +1,14 @@
+1 + (1 + 1.2 * (1 * 7 / 8) && 1);
+!1 + 1 ; a + 1 ;
+yo
+true
+false
+"hello world"
+'a'
+''
+"hello" + 1;
+"yo" + 't';
+"there" + a; 
+"yo" + "yo";
+"paren" + (a);
+"paren" + true;

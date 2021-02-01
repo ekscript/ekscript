@@ -1,0 +1,165 @@
+program = statements* ;
+statement = export_statement
+            | import_statement
+            | debugger_statement
+            | expression_statement
+            | declaration
+            | statement_block
+            | if_statement
+            | switch_statement
+            | for_statement
+            | while_statement
+            | do_statement
+            | try_statement
+            | with_statement
+            | break_statement
+            | continue_statement
+            | return_statement
+            | throw_statement
+            | empty_statement
+            | labeled_statement
+            ;
+
+export_statement = 'export'
+                    (
+                        (
+                            '*' from_clause semicolon
+                        |   export_clause semicolon
+                        |   export_clause from_clause semicolon
+                        )
+                    |
+                        (
+                            decorator* 'export'                             
+                            (
+                                declaration
+                            |   'default' expression semicolon
+                            )
+                        )
+                    |   'export' 'as' 'namespace' identifier semicolon
+                    );
+
+export_clause       =
+                    '{'
+                        import_export_speficier
+                        (',' import_export_speficier)* ','?
+                    '}' ;
+
+import_statement    = 'import' 'type'? import_clause from_clause semicolon ;
+import_clause       =  namespace_import | named_import
+                        | (',' ( namespace_import | named_imports )); 
+
+from_clause         = 'from' string ;
+namespace_import    = '*' 'as' identifier ;
+named_imports       =   '{'
+                            (import_export_speficier)
+                            (',' import_export_speficier)* ','?
+                        '}' ;
+
+debugger_statement   = 'debugger' semicolon ;
+
+expression_statement = expression semicolon ;
+
+expression           =  primary_expression
+                        | assignment_expression
+                        | augmented_assignment_expression
+                        | await expression
+                        | unary_expression
+                        | binary_expression
+                        | ternary_expression
+                        | update_expression
+                        | new_expression
+                        | yield_expression
+                        ;
+
+primary_expression  =   this
+                        | super
+                        | true
+                        | false
+                        | null
+                        | import
+                        | identifier
+                        | reserved_identifier
+                        | number
+                        | string
+                        | template_string
+                        | regex
+                        | object
+                        | array
+                        | function
+                        | arrow_function
+                        | generator_function
+                        | class
+                        | parenthesized_expression
+                        | subscript_expression
+                        | member_expression
+                        | meta_property
+                        | call_expression ;
+this        = 'this' ;
+super       = 'super' ;
+true        = 'true' ;
+false       = 'false' ;
+null        = 'null' ;
+import      = 'import' ;
+
+alpha                   = /[^\x00-\x1F\s0-9:;`"'@#.,|^&<=>+\-*/\\%?!~()\[\]{}\uFEFF\u2060\u200B\u00A0]|\\u[0-9a-fA-F]{4}|\\u\{[0-9a-fA-F]+\}/ ;
+alphanumeric            = /[^\x00-\x1F\s:;`"'@#.,|^&<=>+\-*/\\%?!~()\[\]{}\uFEFF\u2060\u200B\u00A0]|\\u[0-9a-fA-F]{4}|\\u\{[0-9a-fA-F]+\}/ ;
+identifier              = alpha (alphanumeric)* ;
+reserved_identifier     = 'get' | 'set' | 'async' | 'static' ;
+
+# ------------ number -----------------
+hex_literal             = ('0x' | '0X') /[\da-fA-F](_?[\da-fA-F])*/ ;
+decimal_digits          = /\d(_?\d)*/ ;
+signed_integer          = ('-' | '+' )? decimal_digits ;
+exponent_part           = ('e' | 'E') signed_integer ;
+binary_literal          = ('0b' | '0B') /[\da-fA-F](_?[\da-fA-F])*/ ;
+octal_literal           = ('0o' | '0O') /[0-7](_?[0-7])*/) ;
+bigint_literal          = (
+                            hex_literal | binary_literal
+                            | octal_literal | decimal_digits
+                        ) 'n' ;
+decimal_integer_literal = '0' | ( '0'? /[1-9]/ ('_' decimal_digits)?  ) ;
+decimal_literal         = (decimal_integer_literal '.' decimal_digits? exponent_part?)
+                        | ('.' decimal_digits exponent_part?)
+                        | (decimal_integer_literal exponent_part)
+                        | (decimal_digits);
+number                  = hex_literal
+                        | decimal_literal
+                        | binary_literal
+                        | octal_literal
+                        | bigint_literal
+                        ;
+# -------------------------------------
+
+# ---------- string ---------------
+
+# --------------------------------
+assignment_expression       = (parenthesized_expression | lhs_expression) '=' expression;
+
+parenthesized_expression    = '(' expressions ')'  ;
+expressions                 = expression | sequence_expression ;
+sequence_expression         = expression ',' (sequence_expression | expression) ;
+
+augmented_assignment_expression =   augmented_assignment_lhs 
+                                    (
+                                        '+=' | '-=' | '*=' | '/=' | '%='
+                                        | '^=' | '&=' | '|=' | '>>=' | '>>>='
+                                        | '<<=' | '**=' | '&&=' | '||=' | '??='
+                                    )
+                                    expression ;
+augmented_assignment_lhs =  member_expression
+                            | subscript_expression
+                            | reserved_identifier
+                            | identifier
+                            | parenthesized_expression
+                            ;
+
+
+lhs_expression          =   member_expression
+                            | subscript_expression
+                            | identifier
+                            | reserved_identifier
+                            | destructuring_pattern
+                            ;
+
+semicolon               = (';')? ;
+

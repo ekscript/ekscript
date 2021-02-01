@@ -1,0 +1,14 @@
+#include<stdbool.h>
+int main(int argc, char **argv) {
+  "hello1" ;
+  int a = 1 ;
+  string b ;
+  int c = 1 ;
+  bool d = true ;
+  const bool e = true ;
+  const bool f ;
+  const bool g = e ;
+  int h = ( 1 + 2 ) ;
+  string i = initString( "string" , 6 ) ;
+  return 0;
+}
