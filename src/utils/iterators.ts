@@ -7,9 +7,13 @@ export function* loopNodeChildren(node: SyntaxNode | null) {
   }
 }
 
-export function* loopNamedNodeChild(node: SyntaxNode | null) {
+export function* loopNamedNodeChild<T extends SyntaxNode = SyntaxNode>(
+  node: SyntaxNode | null
+) {
   if (node != null) {
-    for (let i = 0; i < node.namedChildCount; i++)
-      yield { i, child: node.namedChildren[i] };
+    for (let i = 0; i < node.namedChildCount; i++) {
+      const child: SyntaxNode = node.namedChildren[i];
+      yield { i, child: child as T };
+    }
   }
 }

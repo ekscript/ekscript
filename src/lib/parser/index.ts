@@ -21,7 +21,7 @@ import { TCompilerErrorType } from '../compiler/errorHandler';
 // ----------------------------------------
 
 export default class Parser {
-  private parser: TSParser;
+  tsParser: TSParser;
   private _typeTree: { rootNode: string };
 
   constructor(
@@ -30,13 +30,13 @@ export default class Parser {
     private errors: TCompilerError[] = [],
     private warnings: TCompilerError[] = []
   ) {
-    this.parser = new TSParser();
-    this.parser.setLanguage(TSEk);
+    this.tsParser = new TSParser();
+    this.tsParser.setLanguage(TSEk);
     this._typeTree = { rootNode: '' };
   }
 
   parse() {
-    return this.parser.parse(this.entry.fileContent);
+    return this.tsParser.parse(this.entry.fileContent);
   }
 
   get typeTree() {

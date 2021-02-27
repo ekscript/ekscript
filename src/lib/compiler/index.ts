@@ -53,7 +53,9 @@ export default class Compiler {
   }
 
   resolve() {
-    new Resolver(this.tree!, this.errors, this.warnings).visit();
+    new Resolver(this.tree!, this.errors, this.warnings).visit(
+      this.tree?.rootNode!
+    );
     // printWarnings(this.warnings);
     if (this.errors.length) {
       // printErrors(this.errors);

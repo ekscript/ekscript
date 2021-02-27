@@ -40,8 +40,7 @@
   },
   "engines": {
     "node": ">=10"
-  },
-  "devDependencies": {
+  }, "devDependencies": {
     "@asgerf/dts-tree-sitter": "^0.1.0",
     "@ava/typescript": "^1.1.1",
     "@istanbuljs/nyc-config-typescript": "^1.0.1",

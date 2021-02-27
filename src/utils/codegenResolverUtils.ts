@@ -1,12 +1,15 @@
 import {
-  IdentifierDetails,
+  IdentifierNode,
   StatementBlockNode,
+  SubVariableType,
   SyntaxNode,
-  VariableDeclaratorNode,
 } from 'tree-sitter-ekscript';
+
+import { FuncGenType } from '../types/compiler';
 
 export const matchLiteralType = (lit: string) =>
   lit == 'int_literal' ||
+  lit == 'bigint_literal' ||
   lit == 'float_literal' ||
   lit == 'char' ||
   lit == 'string' ||
@@ -22,109 +25,82 @@ export const matchLiteralType = (lit: string) =>
 export function getEnvValueRecursively(
   identifierName: string,
   node: SyntaxNode
-): IdentifierDetails | null {
+): IdentifierNode | null {
   if (node == null) return null;
-  if (node!.type == 'statement_block' || node!.type == 'program') {
-    node = node as StatementBlockNode;
-    if (node?.env[identifierName] != null) return node?.env[identifierName];
+  if (
+    node!.type == 'statement_block' ||
+    node!.type == 'program' ||
+    node.type == 'for_statement'
+  ) {
+    const theEnv = (node as StatementBlockNode)?.env;
+    if (theEnv[identifierName] != null) {
+      return theEnv[identifierName];
+    }
     return getEnvValueRecursively(identifierName, node.parent!);
   }
   return getEnvValueRecursively(identifierName, node.parent!);
 }
 
 /**
- * TODO: Later on manage complex types
- * TODO: identifier
- * TODO: verify nullable types
- * Returns the type from a variable declaration node
- * @param node Must be a node of type variable_declarator
- * @returns
+ * compare variable types w.r.t. to two variableTypes and subVariableType
  * */
-export function detectTypeFromVariableDecl(node: VariableDeclaratorNode) {
-  if (node.type != 'variable_declarator')
-    throw new Error('Compilation Error. Not a variable declarator node');
+export function compareVariableTypes(
+  varTypeA: string,
+  subVarTypeA: SubVariableType | null,
+  varTypeB: string,
+  subVarTypeB: SubVariableType | null
+): boolean {
+  /* a util function that is not bound to be used outside of this function therefore declared here. */
+  const compareSubVarType = (
+    s1: SubVariableType | null,
+    s2: SubVariableType | null
+  ) => {
+    if (s1 == null || s2 == null) return false;
+    return JSON.stringify(s1) == JSON.stringify(s2);
+  };
 
-  let variableType = '';
-
-  if (node.namedChildCount == 1) {
-    // let a
-    throw new Error('Compilation Error.');
-  } else if (node.namedChildCount == 2) {
-    // for `let a: int` || `let a = 1`
-    // TODO: consider nullable
-
-    const lastChild = node.lastNamedChild!;
-    if (lastChild.type == 'type_annotation') {
-      // let a: int
-      const nodeType = lastChild.firstNamedChild?.type;
-      variableType = lastChild.firstNamedChild?.text!;
-      if (nodeType == 'predefined_type') {
-        throw new Error(
-          'Non-nullable type. Initialize the variable or set it as a nullable type'
-        );
-      } else {
-        // check if the type is nullable. error if not
-      }
-    } else {
-      // let a = 1, b = 'string', c = a;
-      switch (lastChild.type!) {
-        case 'int_literal':
-          return 'int';
-        case 'float_literal':
-          return 'float';
-        case 'char':
-        case 'null':
-        case 'string':
-          return lastChild.type!;
-        case 'true':
-        case 'false':
-          return 'bool';
-        default:
-          // TODO: work on complex types
-          return '';
-      }
-    }
-  } else if (node.namedChildCount == 3) {
-    // let a: string = '1', let b: boolean = c
-    const typeChild = node.namedChild(1)!;
-    const initVal = node.namedChild(2)!;
-    const initValType = initVal?.type!;
-
-    if (typeChild?.type == 'type_annotation') {
-      const getType = (variableType: string): string => {
-        if (initValType == variableType) return variableType;
-        if (initValType == 'identifier') {
-          const idDetails = getEnvValueRecursively(initVal?.text, node.parent!);
-          if (idDetails == null) throw new Error('Undefined variable.');
-          else {
-            variableType = idDetails.type;
-            if (variableType == variableType) return variableType;
-            throw new Error(
-              `Type mismatch between: ${typeChild.type} & ${variableType}`
-            );
-          }
+  if (varTypeA == varTypeB) {
+    if (varTypeA == 'array')
+      return compareSubVarType(subVarTypeA!, subVarTypeB!);
+    if (varTypeA == 'object') {
+      for (const key in subVarTypeA!.fields!) {
+        const value = subVarTypeA?.fields ? subVarTypeA?.fields[key] : null;
+        const sVTBF = subVarTypeB?.fields ? subVarTypeB?.fields[key] : null;
+        if (sVTBF == null) return false;
+        if (typeof value == 'string') {
+          if (typeof sVTBF != 'string' || sVTBF != value) return false;
+        } else {
+          if (!compareVariableTypes(key, value, key, sVTBF as SubVariableType))
+            return false;
         }
-        throw new Error(`Expected String initial value. Got ${initValType}`);
-      };
-      variableType = typeChild.firstNamedChild?.text!;
-
-      switch (variableType) {
-        case 'boolean':
-          getType(variableType);
-          return 'bool';
-        case 'int_literal':
-          getType(variableType);
-          return 'int';
-        case 'float_literal':
-          getType(variableType);
-          return 'float';
-        case 'char':
-        case 'string':
-          return getType(variableType);
-        default:
-          return variableType;
       }
+      return true;
     }
+    return true;
   }
-  return variableType;
+  return false;
+}
+
+export const isComparisionOperator = (op: string) =>
+  op == '==' ||
+  op == '!=' ||
+  op == '<=' ||
+  op == '>=' ||
+  op == '<' ||
+  op == '>' ||
+  op == '&&' ||
+  op == '||';
+
+export function stitchFunctions(functions: FuncGenType[]): string {
+  let finalString = '';
+  for (const func of functions) {
+    const { returnType, name, funcArgs, body, destructors } = func;
+    finalString += `${returnType} ${name}(${funcArgs
+      .map((a) => a.join(' '))
+      .join(', ')}) {
+${body.join('\n')}${destructors.length ? '\n' : ''}${destructors.join('\n')}
+}
+`;
+  }
+  return finalString;
 }

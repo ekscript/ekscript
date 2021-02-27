@@ -48,12 +48,6 @@ declare module 'tree-sitter-ekscript' {
     typeDef,
   }
 
-  export interface IdentifierDetails {
-    type: string;
-    kind: IVarKind;
-    isConst: boolean;
-  }
-
   interface SyntaxNodeBase {
     tree: Tree;
     type: string;
@@ -64,6 +58,7 @@ declare module 'tree-sitter-ekscript' {
     startIndex: number;
     endIndex: number;
     parent: SyntaxNode | null;
+    _parent: SyntaxNode | null;
     children: Array<SyntaxNode>;
     namedChildren: Array<SyntaxNode>;
     childCount: number;
@@ -105,6 +100,8 @@ declare module 'tree-sitter-ekscript' {
 
     closest<T extends SyntaxType>(types: T | readonly T[]): NamedNode<T> | null;
     walk(): TreeCursor;
+
+    variableType: string;
   }
 
   export interface TreeCursor {
@@ -361,9 +358,11 @@ declare module 'tree-sitter-ekscript' {
     Super = 'super',
     This = 'this',
     True = 'true',
+    Boolean = 'boolean',
     TypeIdentifier = 'type_identifier',
     Int = 'int_literal',
     Float = 'float_literal',
+    BigInt = 'bigint_literal',
     Char = 'char',
   }
 
@@ -467,6 +466,7 @@ declare module 'tree-sitter-ekscript' {
     | 'new'
     | SyntaxType.Int
     | SyntaxType.Float
+    | SyntaxType.BigInt
     | SyntaxType.Char
     | 'of'
     | 'private'
@@ -646,7 +646,6 @@ declare module 'tree-sitter-ekscript' {
     | YieldExpressionNode
     | UnnamedNode<'!'>
     | UnnamedNode<'!='>
-    | UnnamedNode<'!=='>
     | UnnamedNode<'"'>
     | UnnamedNode<'${'>
     | UnnamedNode<'%'>
@@ -682,7 +681,6 @@ declare module 'tree-sitter-ekscript' {
     | UnnamedNode<'<='>
     | UnnamedNode<'='>
     | UnnamedNode<'=='>
-    | UnnamedNode<'==='>
     | UnnamedNode<'=>'>
     | UnnamedNode<'>'>
     | UnnamedNode<'>='>
@@ -748,6 +746,7 @@ declare module 'tree-sitter-ekscript' {
     | UnnamedNode<'new'>
     | NullNode
     | IntNode
+    | BigIntNode
     | FloatNode
     | CharNode
     | UnnamedNode<SyntaxType.Int>
@@ -791,6 +790,7 @@ declare module 'tree-sitter-ekscript' {
     | UnnamedNode<'|}'>
     | UnnamedNode<'}'>
     | UnnamedNode<'~'>
+    | ValueNode
     | ErrorNode;
 
   export type DeclarationNode =
@@ -834,6 +834,9 @@ declare module 'tree-sitter-ekscript' {
     | NullNode
     | IntNode
     | FloatNode
+    | BigIntNode
+    | TrueNode
+    | FalseNode
     | CharNode
     | ObjectNode
     | ParenthesizedExpressionNode
@@ -844,7 +847,6 @@ declare module 'tree-sitter-ekscript' {
     | TemplateStringNode
     | TernaryExpressionNode
     | ThisNode
-    | TrueNode
     | TypeAssertionNode
     | UnaryExpressionNode
     | UpdateExpressionNode
@@ -885,6 +887,7 @@ declare module 'tree-sitter-ekscript' {
     nameNode:
       | ComputedPropertyNameNode
       | FloatNode
+      | BigIntNode
       | IntNode
       | CharNode
       | PropertyIdentifierNode
@@ -909,7 +912,7 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.Arguments;
   }
 
-  export interface ArrayNode extends NamedNodeBase {
+  export interface ArrayNode extends ValueNode {
     type: SyntaxType.Array;
   }
 
@@ -917,11 +920,11 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.ArrayPattern;
   }
 
-  export interface ArrayTypeNode extends NamedNodeBase {
+  export interface ArrayTypeNode extends ValueNode {
     type: SyntaxType.ArrayType;
   }
 
-  export interface ArrowFunctionNode extends NamedNodeBase {
+  export interface ArrowFunctionNode extends ValueNode {
     type: SyntaxType.ArrowFunction;
     bodyNode: ExpressionNode | StatementBlockNode;
     parameterNode?: IdentifierNode;
@@ -933,15 +936,15 @@ declare module 'tree-sitter-ekscript' {
     type_parametersNode?: TypeParametersNode;
   }
 
-  export interface AsExpressionNode extends NamedNodeBase {
+  export interface AsExpressionNode extends ValueNode {
     type: SyntaxType.AsExpression;
   }
 
-  export interface AssertsNode extends NamedNodeBase {
+  export interface AssertsNode extends ValueNode {
     type: SyntaxType.Asserts;
   }
 
-  export interface AssignmentExpressionNode extends NamedNodeBase {
+  export interface AssignmentExpressionNode extends ValueNode {
     type: SyntaxType.AssignmentExpression;
     leftNode:
       | DestructuringPatternNode
@@ -959,7 +962,7 @@ declare module 'tree-sitter-ekscript' {
     rightNode: ExpressionNode;
   }
 
-  export interface AugmentedAssignmentExpressionNode extends NamedNodeBase {
+  export interface AugmentedAssignmentExpressionNode extends ValueNode {
     type: SyntaxType.AugmentedAssignmentExpression;
     leftNode:
       | IdentifierNode
@@ -970,16 +973,15 @@ declare module 'tree-sitter-ekscript' {
     rightNode: ExpressionNode;
   }
 
-  export interface AwaitExpressionNode extends NamedNodeBase {
+  export interface AwaitExpressionNode extends ValueNode {
     type: SyntaxType.AwaitExpression;
   }
 
-  export interface BinaryExpressionNode extends NamedNodeBase {
+  export interface BinaryExpressionNode extends ValueNode {
     type: SyntaxType.BinaryExpression;
     leftNode: ExpressionNode;
     operatorNode:
       | UnnamedNode<'!='>
-      | UnnamedNode<'!=='>
       | UnnamedNode<'%'>
       | UnnamedNode<'&'>
       | UnnamedNode<'&&'>
@@ -992,7 +994,6 @@ declare module 'tree-sitter-ekscript' {
       | UnnamedNode<'<<'>
       | UnnamedNode<'<='>
       | UnnamedNode<'=='>
-      | UnnamedNode<'==='>
       | UnnamedNode<'>'>
       | UnnamedNode<'>='>
       | UnnamedNode<'>>'>
@@ -1011,7 +1012,7 @@ declare module 'tree-sitter-ekscript' {
     labelNode?: StatementIdentifierNode;
   }
 
-  export interface CallExpressionNode extends NamedNodeBase {
+  export interface CallExpressionNode extends ValueNode {
     type: SyntaxType.CallExpression;
     argumentsNode: ArgumentsNode | TemplateStringNode;
     functionNode: ExpressionNode;
@@ -1034,7 +1035,7 @@ declare module 'tree-sitter-ekscript' {
     parameterNode?: DestructuringPatternNode | IdentifierNode;
   }
 
-  export interface ClassNode extends NamedNodeBase {
+  export interface ClassNode extends ValueNode {
     type: SyntaxType.Class;
     bodyNode: ClassBodyNode;
     decoratorNodes: DecoratorNode[];
@@ -1230,7 +1231,7 @@ declare module 'tree-sitter-ekscript' {
     valueNode?: ExpressionNode;
   }
 
-  export interface ExpressionStatementNode extends NamedNodeBase {
+  export interface ExpressionStatementNode extends ValueNode {
     type: SyntaxType.ExpressionStatement;
   }
 
@@ -1260,7 +1261,7 @@ declare module 'tree-sitter-ekscript' {
     rightNode: ExpressionNode | SequenceExpressionNode;
   }
 
-  export interface ForStatementNode extends NamedNodeBase {
+  export interface ForStatementNode extends ScopeContainer {
     type: SyntaxType.ForStatement;
     bodyNode: StatementNode;
     conditionNode: EmptyStatementNode | ExpressionStatementNode;
@@ -1277,7 +1278,7 @@ declare module 'tree-sitter-ekscript' {
     decoratorNodes: DecoratorNode[];
   }
 
-  export interface FunctionNode extends NamedNodeBase {
+  export interface FunctionNode extends ValueNode {
     type: SyntaxType.Function;
     bodyNode: StatementBlockNode;
     nameNode?: IdentifierNode;
@@ -1316,7 +1317,7 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.FunctionType;
   }
 
-  export interface GeneratorFunctionNode extends NamedNodeBase {
+  export interface GeneratorFunctionNode extends ValueNode {
     type: SyntaxType.GeneratorFunction;
     bodyNode: StatementBlockNode;
     nameNode?: IdentifierNode;
@@ -1355,7 +1356,7 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.ImplementsClause;
   }
 
-  export interface ImportNode extends NamedNodeBase {
+  export interface ImportNode extends ValueNode {
     type: SyntaxType.Import;
   }
 
@@ -1398,7 +1399,7 @@ declare module 'tree-sitter-ekscript' {
     type_parametersNode?: TypeParametersNode;
   }
 
-  export interface InternalModuleNode extends NamedNodeBase {
+  export interface InternalModuleNode extends ValueNode {
     type: SyntaxType.InternalModule;
     bodyNode?: StatementBlockNode;
     nameNode: IdentifierNode | NestedIdentifierNode | StringNode;
@@ -1419,6 +1420,7 @@ declare module 'tree-sitter-ekscript' {
 
   export interface LexicalDeclarationNode extends NamedNodeBase {
     type: SyntaxType.LexicalDeclaration;
+    isConst: boolean;
   }
 
   export interface LiteralTypeNode extends NamedNodeBase {
@@ -1433,13 +1435,13 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.MappedTypeClause;
   }
 
-  export interface MemberExpressionNode extends NamedNodeBase {
+  export interface MemberExpressionNode extends ValueNode {
     type: SyntaxType.MemberExpression;
     objectNode: ExpressionNode;
     propertyNode: PropertyIdentifierNode;
   }
 
-  export interface MetaPropertyNode extends NamedNodeBase {
+  export interface MetaPropertyNode extends ValueNode {
     type: SyntaxType.MetaProperty;
   }
 
@@ -1451,6 +1453,7 @@ declare module 'tree-sitter-ekscript' {
       | CharNode
       | IntNode
       | FloatNode
+      | BigIntNode
       | PropertyIdentifierNode
       | StringNode;
     parametersNode: FormalParametersNode;
@@ -1467,6 +1470,7 @@ declare module 'tree-sitter-ekscript' {
       | ComputedPropertyNameNode
       | IntNode
       | FloatNode
+      | BigIntNode
       | CharNode
       | PropertyIdentifierNode
       | StringNode;
@@ -1502,7 +1506,7 @@ declare module 'tree-sitter-ekscript' {
     nameNode: TypeIdentifierNode;
   }
 
-  export interface NewExpressionNode extends NamedNodeBase {
+  export interface NewExpressionNode extends ValueNode {
     type: SyntaxType.NewExpression;
     argumentsNode?: ArgumentsNode;
     constructorNode:
@@ -1520,6 +1524,7 @@ declare module 'tree-sitter-ekscript' {
       | NullNode
       | IntNode
       | FloatNode
+      | BigIntNode
       | CharNode
       | ObjectNode
       | ParenthesizedExpressionNode
@@ -1533,11 +1538,11 @@ declare module 'tree-sitter-ekscript' {
     type_argumentsNode?: TypeArgumentsNode;
   }
 
-  export interface NonNullExpressionNode extends NamedNodeBase {
+  export interface NonNullExpressionNode extends ValueNode {
     type: SyntaxType.NonNullExpression;
   }
 
-  export interface ObjectNode extends NamedNodeBase {
+  export interface ObjectNode extends ValueNode {
     type: SyntaxType.Object;
   }
 
@@ -1566,19 +1571,20 @@ declare module 'tree-sitter-ekscript' {
     valueNode?: ExpressionNode;
   }
 
-  export interface PairNode extends NamedNodeBase {
+  export interface PairNode extends ValueNode {
     type: SyntaxType.Pair;
     keyNode:
       | ComputedPropertyNameNode
       | IntNode
       | FloatNode
+      | BigIntNode
       | CharNode
       | PropertyIdentifierNode
       | StringNode;
     valueNode: ExpressionNode;
   }
 
-  export interface ParenthesizedExpressionNode extends NamedNodeBase {
+  export interface ParenthesizedExpressionNode extends ValueNode {
     type: SyntaxType.ParenthesizedExpression;
   }
 
@@ -1586,14 +1592,12 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.ParenthesizedType;
   }
 
-  export interface PredefinedTypeNode extends NamedNodeBase {
+  export interface PredefinedTypeNode extends ValueNode {
     type: SyntaxType.PredefinedType;
   }
 
-  export interface ProgramNode extends NamedNodeBase {
+  export interface ProgramNode extends ScopeContainer {
     type: SyntaxType.Program;
-    // identifier: { type: 'int_literal', kind: VarKind }
-    env: Record<string, IdentifierDetails>;
   }
 
   export interface PropertySignatureNode extends NamedNodeBase {
@@ -1602,6 +1606,7 @@ declare module 'tree-sitter-ekscript' {
       | ComputedPropertyNameNode
       | IntNode
       | FloatNode
+      | BigIntNode
       | CharNode
       | PropertyIdentifierNode
       | StringNode;
@@ -1614,6 +1619,7 @@ declare module 'tree-sitter-ekscript' {
       | ComputedPropertyNameNode
       | IntNode
       | FloatNode
+      | BigIntNode
       | CharNode
       | PropertyIdentifierNode
       | StringNode;
@@ -1621,7 +1627,7 @@ declare module 'tree-sitter-ekscript' {
     valueNode?: ExpressionNode;
   }
 
-  export interface RegexNode extends NamedNodeBase {
+  export interface RegexNode extends ValueNode {
     type: SyntaxType.Regex;
     flagsNode?: RegexFlagsNode;
     patternNode: RegexPatternNode;
@@ -1644,7 +1650,7 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.ReturnStatement;
   }
 
-  export interface SequenceExpressionNode extends NamedNodeBase {
+  export interface SequenceExpressionNode extends ValueNode {
     type: SyntaxType.SequenceExpression;
     leftNode: ExpressionNode;
     rightNode: ExpressionNode | SequenceExpressionNode;
@@ -1654,16 +1660,21 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.SpreadElement;
   }
 
-  export interface StatementBlockNode extends NamedNodeBase {
-    type: SyntaxType.StatementBlock;
-    env: Record<string, IdentifierDetails>;
+  export interface ScopeContainer extends NamedNodeBase {
+    env: Record<string, IdentifierNode>;
+    destructors: Record<string, string>; // { variableName: string }
   }
 
-  export interface StringNode extends NamedNodeBase {
+  export interface StatementBlockNode extends ScopeContainer {
+    type: SyntaxType.StatementBlock;
+    env: Record<string, IdentifierNode>;
+  }
+
+  export interface StringNode extends ValueNode {
     type: SyntaxType.String;
   }
 
-  export interface SubscriptExpressionNode extends NamedNodeBase {
+  export interface SubscriptExpressionNode extends ValueNode {
     type: SyntaxType.SubscriptExpression;
     indexNode: ExpressionNode | SequenceExpressionNode;
     objectNode: ExpressionNode;
@@ -1682,13 +1693,13 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.SwitchDefault;
   }
 
-  export interface SwitchStatementNode extends NamedNodeBase {
+  export interface SwitchStatementNode extends ValueNode {
     type: SyntaxType.SwitchStatement;
     bodyNode: SwitchBodyNode;
     valueNode: ParenthesizedExpressionNode;
   }
 
-  export interface TemplateStringNode extends NamedNodeBase {
+  export interface TemplateStringNode extends ValueNode {
     type: SyntaxType.TemplateString;
   }
 
@@ -1696,7 +1707,7 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.TemplateSubstitution;
   }
 
-  export interface TernaryExpressionNode extends NamedNodeBase {
+  export interface TernaryExpressionNode extends ValueNode {
     type: SyntaxType.TernaryExpression;
     alternativeNode: ExpressionNode;
     conditionNode: ExpressionNode;
@@ -1714,7 +1725,7 @@ declare module 'tree-sitter-ekscript' {
     handlerNode?: CatchClauseNode;
   }
 
-  export interface TupleTypeNode extends NamedNodeBase {
+  export interface TupleTypeNode extends ValueNode {
     type: SyntaxType.TupleType;
   }
 
@@ -1745,7 +1756,7 @@ declare module 'tree-sitter-ekscript' {
       | UnionTypeNode;
   }
 
-  export interface TypeAnnotationNode extends NamedNodeBase {
+  export interface TypeAnnotationNode extends ValueNode {
     type: SyntaxType.TypeAnnotation;
   }
 
@@ -1753,7 +1764,7 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.TypeArguments;
   }
 
-  export interface TypeAssertionNode extends NamedNodeBase {
+  export interface TypeAssertionNode extends ValueNode {
     type: SyntaxType.TypeAssertion;
   }
 
@@ -1773,11 +1784,11 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.TypePredicateAnnotation;
   }
 
-  export interface TypeQueryNode extends NamedNodeBase {
+  export interface TypeQueryNode extends ValueNode {
     type: SyntaxType.TypeQuery;
   }
 
-  export interface UnaryExpressionNode extends NamedNodeBase {
+  export interface UnaryExpressionNode extends ValueNode {
     type: SyntaxType.UnaryExpression;
     argumentNode: ExpressionNode;
     operatorNode:
@@ -1790,11 +1801,11 @@ declare module 'tree-sitter-ekscript' {
       | UnnamedNode<'~'>;
   }
 
-  export interface UnionTypeNode extends NamedNodeBase {
+  export interface UnionTypeNode extends ValueNode {
     type: SyntaxType.UnionType;
   }
 
-  export interface UpdateExpressionNode extends NamedNodeBase {
+  export interface UpdateExpressionNode extends ValueNode {
     type: SyntaxType.UpdateExpression;
     argumentNode: ExpressionNode;
     operatorNode: UnnamedNode<'++'> | UnnamedNode<'--'>;
@@ -1804,7 +1815,7 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.VariableDeclaration;
   }
 
-  export interface VariableDeclaratorNode extends NamedNodeBase {
+  export interface VariableDeclaratorNode extends ValueNode {
     type: SyntaxType.VariableDeclarator;
     nameNode: DestructuringPatternNode | IdentifierNode;
     typeNode?: TypeAnnotationNode;
@@ -1823,7 +1834,7 @@ declare module 'tree-sitter-ekscript' {
     objectNode: ParenthesizedExpressionNode;
   }
 
-  export interface YieldExpressionNode extends NamedNodeBase {
+  export interface YieldExpressionNode extends ValueNode {
     type: SyntaxType.YieldExpression;
   }
 
@@ -1835,37 +1846,66 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.EscapeSequence;
   }
 
-  export interface FalseNode extends NamedNodeBase {
-    type: SyntaxType.False;
+  export interface SubVariableType {
+    variableType: string;
+    subTypes: (string | SubVariableType)[] | null;
+    fields?: Record<string, SubVariableType | string>;
   }
+
+  export interface ValueNode extends NamedNodeBase {
+    variableType: string;
+    subVariableType: SubVariableType | null; // for unions, array, tuple
+    isConst: boolean | null;
+  }
+
+  export interface FalseNode extends ValueNode {
+    type: SyntaxType.False;
+    variableType: 'boolean';
+  }
+
+  export interface TrueNode extends ValueNode {
+    type: SyntaxType.True;
+    variableType: 'boolean';
+  }
+
+  export type BooleanNode = TrueNode | FalseNode;
 
   export interface HashBangLineNode extends NamedNodeBase {
     type: SyntaxType.HashBangLine;
   }
 
-  export interface IdentifierNode extends NamedNodeBase {
+  export interface IdentifierNode extends ValueNode {
     type: SyntaxType.Identifier;
-    variableType: string;
     isConst: boolean;
+    kind: IVarKind;
   }
 
-  export interface NullNode extends NamedNodeBase {
+  export interface NullNode extends ValueNode {
     type: SyntaxType.Null;
+    variableType: 'null';
   }
 
-  export interface IntNode extends NamedNodeBase {
+  export interface IntNode extends ValueNode {
     type: SyntaxType.Int;
+    variableType: 'int';
   }
 
-  export interface FloatNode extends NamedNodeBase {
+  export interface FloatNode extends ValueNode {
     type: SyntaxType.Float;
+    variableType: 'float';
   }
 
-  export interface CharNode extends NamedNodeBase {
+  export interface BigIntNode extends ValueNode {
+    type: SyntaxType.BigInt;
+    variableType: 'bigint';
+  }
+
+  export interface CharNode extends ValueNode {
     type: SyntaxType.Char;
+    variableType: 'char';
   }
 
-  export interface PropertyIdentifierNode extends NamedNodeBase {
+  export interface PropertyIdentifierNode extends ValueNode {
     type: SyntaxType.PropertyIdentifier;
   }
 
@@ -1889,19 +1929,15 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.StatementIdentifier;
   }
 
-  export interface SuperNode extends NamedNodeBase {
+  export interface SuperNode extends ValueNode {
     type: SyntaxType.Super;
   }
 
-  export interface ThisNode extends NamedNodeBase {
+  export interface ThisNode extends ValueNode {
     type: SyntaxType.This;
   }
 
-  export interface TrueNode extends NamedNodeBase {
-    type: SyntaxType.True;
-  }
-
-  export interface TypeIdentifierNode extends NamedNodeBase {
+  export interface TypeIdentifierNode extends ValueNode {
     type: SyntaxType.TypeIdentifier;
   }
 }

@@ -1,0 +1,22 @@
+#include<ekarray.h>
+#include<ekstr.h>
+int main(int argc, char **argv) {
+  int_array arr1 = init_int_array ( 2 ) ;
+  push_int_array ( arr1, 1 ) ;
+  push_int_array ( arr1, 2 ) ;
+  int_array_array arr = init_int_array_array ( 2 ) ;
+  int_array temp0 = init_int_array ( 1 ) ;
+  push_int_array ( temp0, 1 ) ;
+  push_int_array_array ( arr, temp0 ) ;
+  push_int_array_array ( arr, arr1 ) ;
+  string_array arr2 = init_string_array ( 2 ) ;
+  string temp1 = init_string ( "hello", 5 ) ;
+  push_string_array ( arr2, temp1 ) ;
+  string temp2 = init_string ( "yo", 2 ) ;
+  push_string_array ( arr2, temp2 ) ;
+  string_array_array arr3 = init_string_array_array ( 1 ) ;
+  push_string_array_array ( arr3, arr2 ) ;
+  destroy_string ( temp1 ) ;
+  destroy_string ( temp2 ) ;
+  return 0;
+}

@@ -1,15 +1,11 @@
 #include<stdbool.h>
-const char *concat_string_lit_int(const char *str, const size_t strLen, const int i) {
-  char *newStr = (char *)malloc(sizeof(char) * (strLen + 51));
-  snprintf(newStr, (strLen + 51), "%s%d", str, i);
-  printf("%ld\n", strlen(newStr));
-  return newStr;
-}
+#include<ekstr.h>
 int main(int argc, char **argv) {
-  1 + ( 1 + 1.2 * ( 1 * 7 / 8 ) && 1 ) ;
-  ! 1 + 1 ;
+  1 + ( 1 + 1.2 * ( 1 * 7 / 8 ) << 1 ) ;
+  int a = 1 ;
+  1 + 1 ;
   a + 1 ;
-  yo ;
+  int yo = 1 ;
   true ;
   false ;
   "hello world" ;
@@ -17,13 +13,30 @@ int main(int argc, char **argv) {
   '' ;
   "hello1" ;
   "yot" ;
-  const char* temp_1 = concat_string_lit_int( "there", 5, a);
-  temp_1 ;
+  const string temp1 = init_string( "there", 5 ) ;
+  concat_string_int( temp1, a) ;
   "yoyo" ;
-  const char* temp_2 = concat_string_lit_int( "paren", 5, (a));
-  temp_2 ;
+  const string temp2 = init_string( "paren", 5 ) ;
+  concat_string_int( temp2, (a)) ;
   "parentrue" ;
-  free(temp_1);
-  free(temp_2);
+  int b = 1 + 1 ;
+  string c = init_string ( "hello1" , 6 ) ;
+  const string temp3 = init_string( "hello", 5 ) ;
+  string d = concat_string_int( temp3, a) ;
+  if ( b == 2 ) {
+    a = 2 ;
+  } else if ( compare_string_char ( c , "yo" , 2 ) ) {
+    b = 10 ;
+  } else if ( compare_string_char ( d , "yo" , 2 ) ) {
+    destroy_string ( d ) ;
+    d = init_string ( "yo", 2 ) ;
+  } else {
+    a = 2 ;
+  }
+  destroy_string ( c ) ;
+  destroy_string ( d ) ;
+  destroy_string ( temp1 ) ;
+  destroy_string ( temp2 ) ;
+  destroy_string ( temp3 ) ;
   return 0;
 }

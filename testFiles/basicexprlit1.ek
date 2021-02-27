@@ -1,6 +1,8 @@
-1 + (1 + 1.2 * (1 * 7 / 8) && 1);
-!1 + 1 ; a + 1 ;
-yo
+1 + (1 + 1.2 * (1 * 7 / 8) << 1);
+let a = 1;
+1 + 1;
+a + 1;
+let yo = 1;
 true
 false
 "hello world"
@@ -12,3 +14,14 @@ false
 "yo" + "yo";
 "paren" + (a);
 "paren" + true;
+let b = 1 + 1;
+let c = "hello" + 1;
+let d = "hello" + a;
+if (b == 2) {
+   a = 2;
+} else if (c == "yo") {
+   b = 10;
+} else if (d == "yo") 
+   d = "yo";
+else
+   a = 2 ; 
