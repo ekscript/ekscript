@@ -14,13 +14,17 @@ import {
   IfStatementNode,
   IntNode,
   LexicalDeclarationNode,
+  MemberExpressionNode,
+  ObjectNode,
   ParenthesizedExpressionNode,
   ProgramNode,
+  PropertyIdentifierNode,
   ScopeContainer,
   SequenceExpressionNode,
   StatementBlockNode,
   StringNode,
   SubscriptExpressionNode,
+  SubVariableType,
   SwitchCaseNode,
   SwitchStatementNode,
   SyntaxNode,
@@ -41,9 +45,11 @@ import { loopNamedNodeChild, loopNodeChildren } from '../../utils/iterators';
 import { removeUnderscore } from '../../utils/number';
 import { TCompilerErrorType } from '../compiler/errorHandler';
 
+import { generateFromGenerators } from './constantFunctions';
+
 // TODO: Uncomment later
 // import { generateArrayUtils } from './constantFunctions';
-import { getArrayName } from './utils/misc';
+// import { getArrayName } from './utils/misc';
 
 // TODO: uncomment later
 // import { genStringUtil } from './utils/utils1';
@@ -77,7 +83,8 @@ class CodeGen implements Visitor<SyntaxNode> {
   constructor(
     private ast: Tree,
     private errors: TCompilerError[] = [],
-    private warnings: TCompilerError[] = []
+    private warnings: TCompilerError[] = [],
+    private generators: Record<string, SubVariableType> = {}
   ) {
     this.currentScope = this.ast.rootNode as ScopeContainer;
   }
@@ -103,7 +110,13 @@ class CodeGen implements Visitor<SyntaxNode> {
 
   getFinalCode = () => {
     const stiched = stitchFunctions(this.functions);
-    return [...this.includes, ...this.utils, stiched].join('\n');
+    // console.log(JSON.stringify(this.generators, null, '  '));
+    return [
+      ...this.includes,
+      generateFromGenerators(this.generators),
+      ...this.utils,
+      stiched,
+    ].join('\n');
   };
 
   addLine() {
@@ -241,6 +254,10 @@ class CodeGen implements Visitor<SyntaxNode> {
       }
       case 'array': {
         this.visitArray(node as ArrayNode);
+        break;
+      }
+      case 'object': {
+        this.visitObject(node as ObjectNode);
         break;
       }
       case 'lexical_declaration': {
@@ -472,7 +489,8 @@ class CodeGen implements Visitor<SyntaxNode> {
     this.singleLineStart = true;
 
     if (node.isConst) {
-      if (node.variableType != 'array') this.addCol('const');
+      if (node.variableType != 'array' && node.variableType != 'object')
+        this.addCol('const');
     }
 
     const { nameNode, valueNode } = node;
@@ -483,7 +501,8 @@ class CodeGen implements Visitor<SyntaxNode> {
     if (node.variableType == 'array') {
       // this.addInclude('stdlib');
       this.addInclude('ekarray');
-      const array_name = getArrayName((node as SyntaxNode) as ArrayNode);
+      const array_name = ((node as SyntaxNode) as ArrayNode).subVariableType
+        ?.typeAlias;
       this.addCol(
         `${array_name} ${idName} = init_${array_name} ( ${valueNode?.namedChildCount} ) ;`
       );
@@ -661,18 +680,26 @@ class CodeGen implements Visitor<SyntaxNode> {
     console.log(':608:subscript: ', node.toString());
   }
 
+  visitMemberExpr(node: MemberExpressionNode) {
+    console.log('member expr:', node.toString());
+  }
+
+  visitPropertyIdentifier(node: PropertyIdentifierNode) {
+    console.log('prop identifier:', node.toString());
+  }
+
   // ----- literal and identifier -----
   visitArray(node: ArrayNode, varName = '') {
     this.singleLineStart = true;
 
-    const array_name = getArrayName(node);
+    const array_name = node.subVariableType.typeAlias;
 
     for (const { child } of loopNamedNodeChild(node)) {
       this.singleLineStart = true;
       switch (child.type) {
         case 'array': {
           const temp = `temp${this.numTempVars++}`;
-          const childArrName = getArrayName(child as ArrayNode);
+          const childArrName = (child as ArrayNode).subVariableType.typeAlias;
           this.addCol(
             `${childArrName} ${temp} = init_${childArrName} ( ${child.namedChildCount} ) ;`
           );
@@ -698,6 +725,11 @@ class CodeGen implements Visitor<SyntaxNode> {
       }
       this.addLine();
     }
+  }
+
+  visitObject(node: ObjectNode) {
+    console.log(node.variableType);
+    console.log(node.subVariableType);
   }
 
   visitChar(node: CharNode) {

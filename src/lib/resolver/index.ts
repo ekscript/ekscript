@@ -55,6 +55,7 @@ import {
   compareVariableTypes,
   getEnvValueRecursively,
   isComparisionOperator,
+  mirrorAnonNameInComplexTypes,
 } from '../../utils/codegenResolverUtils';
 import { loopNamedNodeChild } from '../../utils/iterators';
 import { TCompilerErrorType } from '../compiler/errorHandler';
@@ -62,6 +63,8 @@ import { TCompilerErrorType } from '../compiler/errorHandler';
 // -------------------
 export default class Resolver implements Visitor<SyntaxNode> {
   private currentScope: ScopeContainer;
+  private _generators: Record<string, SubVariableType> = {};
+  private counter = 0;
 
   constructor(
     private tree: Tree,
@@ -69,6 +72,10 @@ export default class Resolver implements Visitor<SyntaxNode> {
     private warnings: TCompilerError[]
   ) {
     this.currentScope = this.tree.rootNode as ProgramNode;
+  }
+
+  get generators(): Record<string, SubVariableType> {
+    return this._generators;
   }
 
   // --------- visit --------------
@@ -194,6 +201,7 @@ export default class Resolver implements Visitor<SyntaxNode> {
         throw new Error('Error compiling some weird shit!');
       }
     }
+    return this;
   }
 
   visitEmptyStmt(node: EmptyStatementNode) {
@@ -335,7 +343,7 @@ export default class Resolver implements Visitor<SyntaxNode> {
     }
   }
 
-  //  ---- identifiers & literals
+  ////  -------- identifiers & literals ----------
   visitInt(node: IntNode) {
     node.variableType = 'int';
   }
@@ -375,72 +383,133 @@ export default class Resolver implements Visitor<SyntaxNode> {
     console.log('prop:', node.toString());
   }
 
-  visitArray(node: ArrayNode) {
+  visitArray(node: ArrayNode, generator = false) {
     node.variableType = 'array';
     const subVariableType: SubVariableType = {
       subTypes: [],
       variableType: 'array',
     };
 
-    if (node.namedChildCount == 0) {
-      return;
-    }
+    if (node.namedChildCount == 0) return;
 
-    const fieldTypes = new Set<string>();
+    const complexFieldTypes: SubVariableType[] = [];
+    const stringFieldTypes = new Set<string>();
+
     for (const { child } of loopNamedNodeChild(node)) {
-      this.visit(child);
-      if (child.variableType == 'array') {
-        if ((child as ValueNode).subVariableType) {
-          fieldTypes.add(JSON.stringify((child as ValueNode).subVariableType));
+      if (child.type == 'comment') continue;
+      else if (child.type == 'array')
+        this.visitArray(child as ArrayNode, generator);
+      else if (child.type == 'object')
+        this.visitObject(child as ObjectNode, generator);
+      else this.visit(child);
+
+      switch (child.variableType) {
+        case 'object':
+        case 'array': {
+          let isPresent = false;
+          for (let i = 0; i < complexFieldTypes.length; i++) {
+            const varB = complexFieldTypes[i];
+            if (
+              compareVariableTypes(
+                child.variableType,
+                (child as ValueNode).subVariableType,
+                varB.variableType,
+                varB
+              )
+            ) {
+              isPresent = true;
+              break;
+            }
+          }
+          const subVarType = (child as ValueNode).subVariableType;
+          if (!isPresent && subVarType) complexFieldTypes.push(subVarType);
+          break;
         }
-      } else {
-        fieldTypes.add(child.variableType);
+        default: {
+          stringFieldTypes.add(child.variableType);
+          break;
+        }
       }
     }
 
-    if (fieldTypes.size != 0) {
-      for (const str of fieldTypes) {
-        if (str.charAt(0) == '{') {
-          subVariableType.subTypes?.push(JSON.parse(str) as SubVariableType);
-        } else {
-          subVariableType.subTypes?.push(str);
+    if (complexFieldTypes.length == 0 && stringFieldTypes.size == 0) return;
+
+    complexFieldTypes.forEach((fT) => subVariableType.subTypes?.push(fT));
+    for (const fT of stringFieldTypes) subVariableType.subTypes?.push(fT);
+
+    const typeAlias = `anon_array${this.counter++}`;
+    subVariableType.typeAlias = typeAlias;
+    node.subVariableType = subVariableType;
+
+    const subV = (node.firstNamedChild as ValueNode)?.subVariableType;
+
+    if (subV != null) {
+      for (const { child, i } of loopNamedNodeChild(node)) {
+        if (i != 0) {
+          const duplicates = mirrorAnonNameInComplexTypes(
+            subV,
+            (child as ValueNode).subVariableType
+          );
+          duplicates.forEach((dup) => delete this._generators[dup]);
         }
       }
+      // if (generator) this._generators[typeAlias] = subVariableType;
     }
-    node.subVariableType = subVariableType;
+
+    if (generator) this._generators[typeAlias] = subVariableType;
   }
 
-  visitObject(node: ObjectNode) {
+  visitObject(node: ObjectNode, generator = false) {
+    node.variableType = 'object';
+
     const subVariableType: SubVariableType = {
       subTypes: [],
       variableType: 'object',
       fields: {},
     };
+
     for (const { child } of loopNamedNodeChild(node)) {
       const { keyNode, valueNode } = child as PairNode;
-      this.visit(valueNode);
-      const subVarType: SubVariableType | string = valueNode.variableType;
-      switch (subVarType) {
+
+      if (valueNode.type == 'array')
+        this.visitArray(valueNode as ArrayNode, generator);
+      else if (valueNode.type == 'object')
+        this.visitObject(valueNode as ObjectNode, generator);
+      else this.visit(valueNode);
+
+      const varType = valueNode.variableType;
+      const subVarType = valueNode.subVariableType;
+
+      switch (varType) {
         case 'object':
-        case 'array':
-          subVariableType.fields![keyNode.text] = valueNode.subVariableType!;
+        case 'array': {
+          if (subVariableType.fields)
+            subVariableType.fields[keyNode.text] = subVarType;
           break;
-        default:
-          subVariableType.fields![keyNode.text] = subVarType;
+        }
+        default: {
+          subVariableType.fields![keyNode.text] = varType;
+          break;
+        }
       }
-      (child as ValueNode).variableType = valueNode.variableType;
+
+      (child as ValueNode).variableType = varType;
       (child as ValueNode).subVariableType = valueNode.subVariableType;
-      (keyNode as ValueNode).variableType = valueNode.variableType;
+      (keyNode as ValueNode).variableType = varType;
       (keyNode as ValueNode).subVariableType = valueNode.subVariableType;
     }
-    node.variableType = 'object';
+
+    // TODO: Work on resolving this with variable declaration
+    const typeAlias = `anon_object${this.counter++}`;
+    if (generator) this._generators[typeAlias] = subVariableType;
+    subVariableType.typeAlias = typeAlias;
+
     node.subVariableType = subVariableType;
   }
 
-  /// ------ expressions
+  //// ------ expressions ---------
 
   /// binary expression.
-  /// TODO: add more binary expression later
   /// TODO: instanceof, in, of
   visitBinaryExpr(node: BinaryExpressionNode) {
     this.visit(node.leftNode);
@@ -451,6 +520,7 @@ export default class Resolver implements Visitor<SyntaxNode> {
     const rightType = (node.rightNode as ValueNode).variableType;
 
     node.variableType = leftType;
+
     switch (leftType) {
       case 'string': {
         switch (op) {
@@ -679,7 +749,6 @@ export default class Resolver implements Visitor<SyntaxNode> {
     const isConst = node.isConst ? true : false;
     let variableType = '';
     let subVariableType: SubVariableType | null = null;
-
     const childCount = node.namedChildCount;
 
     if (node.namedChildCount > 1) {
@@ -693,37 +762,62 @@ export default class Resolver implements Visitor<SyntaxNode> {
             // Non-nullable types without initializer: let a: string
             this.addError(node, 'Non-nullable types need a initializer');
           } else {
-            this.visitTypeAnnotation(typeNode);
+            this.visitTypeAnnotation(typeNode, true);
           }
         } else if (valueNode != null) {
           // Initializer included: let a = 1; let b = a; let c = "string";
-          if (valueNode?.type == 'identifier') {
-            // let a = b;
-            this.visitIdentifier(valueNode as IdentifierNode);
-            variableType = valueNode?.variableType;
-            subVariableType = valueNode?.subVariableType ?? null;
+          if (valueNode.type == 'array') {
+            this.visitArray(valueNode, true);
+          } else if (valueNode.type == 'object') {
+            this.visitObject(valueNode, true);
           } else {
-            this.visit(valueNode!);
-            variableType = valueNode?.variableType!;
-            if (valueNode?.subVariableType)
-              subVariableType = valueNode?.subVariableType;
+            this.visit(valueNode);
           }
+
+          variableType = valueNode.variableType;
+          if (valueNode.subVariableType)
+            subVariableType = valueNode.subVariableType;
         }
       } else if (childCount == 3) {
-        this.visit(valueNode!);
-        this.visitTypeAnnotation(typeNode!);
-        if (
-          compareVariableTypes(
-            valueNode?.variableType!,
-            valueNode?.subVariableType!,
-            typeNode?.variableType!,
-            typeNode?.subVariableType!
-          )
-        ) {
-          variableType = valueNode?.variableType!;
-          subVariableType = valueNode?.subVariableType!;
-        } else
-          this.addError(node, "Type Annotation and initiliazer don't match.");
+        if (valueNode && typeNode) {
+          this.visit(valueNode);
+          this.visitTypeAnnotation(typeNode, true);
+
+          if (
+            valueNode.variableType == 'array' ||
+            valueNode.variableType == 'object'
+          ) {
+            for (const { child } of loopNamedNodeChild(valueNode)) {
+              const duplicates = mirrorAnonNameInComplexTypes(
+                typeNode.subVariableType,
+                (child as ValueNode).subVariableType
+              );
+              duplicates.forEach((dup) => delete this._generators[dup]);
+            }
+          }
+
+          if (
+            valueNode.variableType == 'array' &&
+            typeNode.variableType == 'array' &&
+            valueNode.subVariableType == null &&
+            typeNode.subVariableType != null
+          ) {
+            variableType = typeNode?.variableType;
+            subVariableType = typeNode?.subVariableType;
+          } else if (
+            compareVariableTypes(
+              typeNode?.variableType!,
+              typeNode?.subVariableType!,
+              valueNode?.variableType!,
+              valueNode?.subVariableType!
+            )
+          ) {
+            variableType = valueNode?.variableType!;
+            subVariableType = valueNode?.subVariableType!;
+          } else {
+            this.addError(node, "Type Annotation and initiliazer don't match.");
+          }
+        }
       }
 
       nameNode = nameNode as IdentifierNode;
@@ -742,8 +836,12 @@ export default class Resolver implements Visitor<SyntaxNode> {
     }
   }
 
-  // Resolves the type annotation node
-  visitTypeAnnotation(node: TypeAnnotationNode) {
+  /**
+   * Resolves the type annotation node
+   * @param node The TypeAnnotationNode
+   * @param generator Whether to generate the sub nodes
+   **/
+  visitTypeAnnotation(node: TypeAnnotationNode, generator = false) {
     const mainType = node.firstNamedChild!;
     switch (mainType?.type) {
       case 'predefined_type': {
@@ -762,33 +860,23 @@ export default class Resolver implements Visitor<SyntaxNode> {
         break;
       }
       case 'array_type': {
+        this.visitTypeAnnotation(
+          (mainType as SyntaxNode) as TypeAnnotationNode,
+          generator
+        );
         node.variableType = 'array';
-        const fieldType = node.firstNamedChild?.firstNamedChild;
-        switch (fieldType?.type) {
-          case 'predefined_type': {
-            node.subVariableType = {
-              subTypes: [fieldType.text!],
-              variableType: 'array',
-            };
-            break;
-          }
-          case 'array_type': {
-            this.visitTypeAnnotation(
-              (mainType as SyntaxNode) as TypeAnnotationNode
-            );
-            node.subVariableType = {
-              subTypes: [],
-              variableType: 'array',
-            };
-            node.subVariableType.subTypes?.push(mainType?.subVariableType!);
-            break;
-          }
-          case 'union_type': {
-            break;
-          }
-          default: {
-            break;
-          }
+        node.subVariableType = { subTypes: [], variableType: 'array' };
+
+        if (generator && node.typeAlias == null) {
+          const typeAlias = `anon_array${this.counter++}`;
+          node.subVariableType.typeAlias = typeAlias;
+          this._generators[typeAlias] = node.subVariableType;
+        }
+
+        if (mainType.firstNamedChild?.type == 'predefined_type') {
+          node.subVariableType.subTypes?.push(mainType?.variableType);
+        } else {
+          node.subVariableType.subTypes?.push(mainType?.subVariableType!);
         }
         break;
       }
@@ -800,17 +888,28 @@ export default class Resolver implements Visitor<SyntaxNode> {
           fields: {},
         };
         for (const { child: pair } of loopNamedNodeChild(mainType)) {
-          const valueNode = pair.lastNamedChild as ValueNode;
           const keyNode = pair.firstNamedChild as ValueNode;
-          this.visit(valueNode);
+          const valueNode = pair.lastNamedChild as ValueNode;
+
+          if (valueNode.type == 'type_annotation') {
+            this.visitTypeAnnotation(
+              valueNode as TypeAnnotationNode,
+              generator
+            );
+          } else {
+            this.visit(valueNode);
+          }
+
           if (valueNode.subVariableType) {
             subVariableType.fields![keyNode.text] = valueNode.subVariableType!;
           } else {
             subVariableType.fields![keyNode.text] = valueNode.variableType;
           }
         }
+        const typeAlias = `anon_object_${this.counter++}`;
+        subVariableType.typeAlias = typeAlias;
         node.subVariableType = subVariableType;
-        console.log('------>', JSON.stringify(subVariableType));
+        if (generator) this._generators[typeAlias] = node.subVariableType;
         break;
       }
       case 'type_identifier': {

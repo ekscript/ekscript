@@ -5,7 +5,7 @@
  * A class that manages the whole compilation process
  * */
 
-import { Tree } from 'tree-sitter-ekscript';
+import { SubVariableType, Tree } from 'tree-sitter-ekscript';
 
 // ------------- Regular Imports ---------
 import { TCompilerError, TCompilerSource } from '../../types/compiler';
@@ -31,6 +31,8 @@ export default class Compiler {
 
   private _tree: Tree | null = null;
 
+  private generators: Record<string, SubVariableType> = {};
+
   constructor(
     entry: TCompilerSource,
     sources: TCompilerSource[] = [],
@@ -53,9 +55,16 @@ export default class Compiler {
   }
 
   resolve() {
-    new Resolver(this.tree!, this.errors, this.warnings).visit(
-      this.tree?.rootNode!
-    );
+    this.generators = new Resolver(
+      this.tree!,
+      this.errors,
+      this.warnings
+    ).visit(this.tree?.rootNode!).generators;
+
+    // console.log('>==');
+    // console.log(JSON.stringify(resolver.generators, null, '    '));
+    // console.log('==<');
+
     // printWarnings(this.warnings);
     if (this.errors.length) {
       // printErrors(this.errors);
@@ -69,7 +78,12 @@ export default class Compiler {
   }
 
   generateCode(tree?: Tree): string {
-    const codegen = new CodeGen(tree ?? this.tree!, this.errors, this.warnings);
+    const codegen = new CodeGen(
+      tree ?? this.tree!,
+      this.errors,
+      this.warnings,
+      this.generators
+    );
     this.output = codegen.compileToC();
     return this.output;
   }

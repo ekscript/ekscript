@@ -48,33 +48,81 @@ export function compareVariableTypes(
   varTypeA: string,
   subVarTypeA: SubVariableType | null,
   varTypeB: string,
-  subVarTypeB: SubVariableType | null
+  subVarTypeB: SubVariableType | null,
+  ignoreEmptyArraysSubVarTypeB = true
 ): boolean {
-  /* a util function that is not bound to be used outside of this function therefore declared here. */
-  const compareSubVarType = (
-    s1: SubVariableType | null,
-    s2: SubVariableType | null
-  ) => {
-    if (s1 == null || s2 == null) return false;
-    return JSON.stringify(s1) == JSON.stringify(s2);
-  };
-
   if (varTypeA == varTypeB) {
-    if (varTypeA == 'array')
-      return compareSubVarType(subVarTypeA!, subVarTypeB!);
+    if (varTypeA == 'array') {
+      if (subVarTypeA && subVarTypeB) {
+        if (subVarTypeA.subTypes && subVarTypeB.subTypes) {
+          if (subVarTypeA.subTypes.length == subVarTypeB.subTypes.length) {
+            for (let i = 0; i < subVarTypeA.subTypes.length; i++) {
+              const subTypeA = subVarTypeA.subTypes[i];
+              const subTypeB = subVarTypeB.subTypes[i];
+
+              if (typeof subTypeA == 'string' && typeof subTypeB == 'string') {
+                return subTypeA == subTypeB;
+              } else if (
+                typeof subTypeA == 'string' ||
+                typeof subTypeB == 'string'
+              ) {
+                return false;
+              }
+
+              if (
+                !compareVariableTypes(
+                  subTypeA.variableType,
+                  subTypeA,
+                  subTypeB.variableType,
+                  subTypeB
+                )
+              )
+                return false;
+            }
+            return true;
+          }
+        }
+        return false;
+      }
+      if (ignoreEmptyArraysSubVarTypeB && subVarTypeA && subVarTypeB == null)
+        return true;
+      return false;
+    }
+
     if (varTypeA == 'object') {
-      for (const key in subVarTypeA!.fields!) {
-        const value = subVarTypeA?.fields ? subVarTypeA?.fields[key] : null;
-        const sVTBF = subVarTypeB?.fields ? subVarTypeB?.fields[key] : null;
-        if (sVTBF == null) return false;
-        if (typeof value == 'string') {
-          if (typeof sVTBF != 'string' || sVTBF != value) return false;
-        } else {
-          if (!compareVariableTypes(key, value, key, sVTBF as SubVariableType))
-            return false;
+      if (subVarTypeA && subVarTypeB) {
+        if (subVarTypeA.fields && subVarTypeB.fields) {
+          const keysA = Object.keys(subVarTypeA.fields);
+          const keysB = Object.keys(subVarTypeB.fields);
+          if (keysA.length == keysB.length) {
+            for (let i = 0; i < keysA.length; i++) {
+              const keyA = keysA[i];
+              const valueA = subVarTypeA.fields[keyA];
+              const valueB = subVarTypeB.fields[keyA];
+              if (valueA && valueB) {
+                if (typeof valueA == 'string' || typeof valueB == 'string') {
+                  if (typeof valueA == 'string' && typeof valueB == 'string') {
+                    if (valueA != valueB) return false;
+                  }
+                } else {
+                  if (
+                    !compareVariableTypes(
+                      valueA.variableType,
+                      valueA,
+                      valueB.variableType,
+                      valueB
+                    )
+                  )
+                    return false;
+                }
+              }
+            }
+            return true;
+          }
         }
       }
-      return true;
+
+      return false;
     }
     return true;
   }
@@ -103,4 +151,43 @@ ${body.join('\n')}${destructors.length ? '\n' : ''}${destructors.join('\n')}
 `;
   }
   return finalString;
+}
+
+/**
+ * @return Array of duplicate typeAlias in the mirroring process
+ * */
+export function mirrorAnonNameInComplexTypes(
+  src: SubVariableType,
+  des: SubVariableType
+): string[] {
+  const arr: string[] = [];
+  if (src && des) {
+    if (src.variableType == 'object') {
+      if (src.typeAlias) des.typeAlias = src.typeAlias;
+
+      for (const key in src.fields) {
+        const srcVal = src.fields[key];
+        let desVal = null;
+        if (des.fields) desVal = des.fields[key];
+        if (typeof srcVal != 'string' && typeof desVal != 'string') {
+          if (desVal) mirrorAnonNameInComplexTypes(srcVal, desVal!);
+        }
+      }
+    } else if (src.variableType == 'array') {
+      if (src.typeAlias) {
+        // if des.typeAlias is already present, replace it
+        // with the one already present
+        if (des.typeAlias) arr.push(des.typeAlias);
+        des.typeAlias = src.typeAlias;
+      }
+      if (src.subTypes && des.subTypes) {
+        if (
+          typeof src.subTypes[0] != 'string' &&
+          typeof des.subTypes[0] != 'string'
+        )
+          mirrorAnonNameInComplexTypes(src.subTypes[0], des.subTypes[0]);
+      }
+    }
+  }
+  return arr;
 }

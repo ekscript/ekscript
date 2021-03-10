@@ -34,7 +34,12 @@ test.todo('placeholder');
 //   t.is(genCode, cFile);
 // });
 
-// test('Array', (t) => {
-//   const [genCode, cFile] = getFileCodes('03_arrays');
+test('Array', (t) => {
+  const [genCode, cFile] = getFileCodes('03_arrays');
+  t.is(genCode, cFile);
+});
+
+// test('Objects', (t) => {
+//   const [genCode, cFile] = getFileCodes('04_objects');
 //   t.is(genCode, cFile);
 // });

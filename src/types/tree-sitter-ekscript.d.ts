@@ -1758,6 +1758,7 @@ declare module 'tree-sitter-ekscript' {
 
   export interface TypeAnnotationNode extends ValueNode {
     type: SyntaxType.TypeAnnotation;
+    typeAlias?: string;
   }
 
   export interface TypeArgumentsNode extends NamedNodeBase {
@@ -1850,11 +1851,13 @@ declare module 'tree-sitter-ekscript' {
     variableType: string;
     subTypes: (string | SubVariableType)[] | null;
     fields?: Record<string, SubVariableType | string>;
+    // if null, then go for fields/subTypes else use this name directly
+    typeAlias?: string;
   }
 
   export interface ValueNode extends NamedNodeBase {
     variableType: string;
-    subVariableType: SubVariableType | null; // for unions, array, tuple
+    subVariableType: SubVariableType; // for unions, array, tuple
     isConst: boolean | null;
   }
 

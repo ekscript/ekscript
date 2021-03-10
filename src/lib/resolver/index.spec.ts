@@ -51,10 +51,10 @@ test.todo('Some TODO tasks');
 //   t.is(
 //     getResolvedAst('let a: string = "", b = a;'),
 //     cleanStr(`(program
-//       (lexical_declaration
-//         (variable_declarator
-//           name: (identifier) type: (type_annotation (predefined_type)) value: (string))
-//         (variable_declarator name: (identifier) value: (identifier))))`)
+//        (lexical_declaration
+//          (variable_declarator
+//            name: (identifier) type: (type_annotation (predefined_type)) value: (string))
+//          (variable_declarator name: (identifier) value: (identifier))))`)
 //   );
 // });
 
@@ -92,10 +92,10 @@ test.todo('Some TODO tasks');
 // test('if-else-if', (t) => {
 //   const error = t.throws(() => {
 //     getResolvedCode(`
-//       let a = 1;
-//       if (a == 1) { let b = 4; }
-//       else if (a == 2) { b = 3; }
-//       else {}`);
+//        let a = 1;
+//        if (a == 1) { let b = 4; }
+//        else if (a == 2) { b = 3; }
+//        else {}`);
 //   });
 //   t.is(error.message, 'Compilation Failed');
 // });
@@ -129,54 +129,70 @@ test.todo('Some TODO tasks');
 //   t.is(
 //     t.throws(() => {
 //       getResolvedCode(`let a = "hello";
-//     switch(a) {
-//       case "yo":
-//       case "a": break;
-//       case 1: break;
-//       case "b": break;
-//       default: break;
-//     }`);
+//      switch(a) {
+//        case "yo":
+//        case "a": break;
+//        case 1: break;
+//        case "b": break;
+//        default: break;
+//      }`);
 //     }).message,
 //     'Compilation Failed'
 //   );
 // });
 
 // test('arrays', (t) => {
-//   t.is(
-//     t.throws(() => {
-//       getResolvedCode(`let a: string[] = [1]`);
-//     }).message,
-//     'Compilation Failed'
-//   );
-//   t.is(
-//     typeof getResolvedAst('let b = "";let a: string[] = ["Hello", b]'),
-//     'string'
-//   );
+//   // t.is(typeof getResolvedAst(`let a = [1]`), 'string');
+//   // t.is(typeof getResolvedAst(`let a = [[1]]`), 'string');
+//   // t.is(
+//   //   typeof getResolvedAst(
+//   //     `let i:string[]=["string"];
+//   //   let b=""; let a:string[]=["Hello",b];
+//   //   `
+//   //   ),
+//   //   'string'
+//   // );
+//   // t.is(
+//   //   typeof getResolvedAst(`let b = [""];let a: string[][] = [b];`),
+//   //   'string'
+//   // );
+//   // t.is(
+//   //   typeof getResolvedAst(
+//   //     `let a = ["str"]; let b: string[][] = [a, ["hello world"]];`
+//   //   ),
+//   //   'string'
+//   // );
+// });
+
+// test('objects', (t) => {
+//   t.is(typeof getResolvedAst('let a = { hello: { yo: "world" } }'), 'string');
 //   t.is(
 //     typeof getResolvedAst(
-//       `let a = ["str"]; let b: string[][] = [a, ["hello world"]]; b[0];`
+//       `let a = { hello: "y", a: 1 }; let b = { hello: "yo", a: 4 }; b = a;`
 //     ),
 //     'string'
 //   );
+//   t.is(
+//     typeof getResolvedAst(`let a={h:{y:"hey",e:'c'},a:'r'}; a.h.e; a.a.r`),
+//     'string'
+//   );
+//   t.is(typeof getResolvedAst(`let a = { h: 'i' }; a.h = 'j'`), 'string');
+//   t.is(
+//     typeof getResolvedAst(`let yo: {a:string,b:float} = {a:"y",b:1.0}`),
+//     'string'
+//   );
 // });
-//
 
-test('objects', (t) => {
-  t.is(typeof getResolvedAst('let a = { hello: { yo: "world" } }'), 'string');
-  t.is(
-    typeof getResolvedAst(
-      `let a = { hello: "y", a: 1 }; let b = { hello: "yo", a: 4 }; b = a;`
-    ),
-    'string'
-  );
-  t.is(
-    typeof getResolvedAst(`let a={h:{y:"hey",e:'c'},a:'r'}; a.h.e; a.a.r`),
-    'string'
-  );
-  t.is(typeof getResolvedAst(`let a = { h: 'i' }; a.h = 'j'`), 'string');
-
-  t.is(
-    typeof getResolvedAst(`let yo: {a:string,b:float} = {a:"y",b:1.0}`),
-    'string'
-  );
-});
+// test('objects + arrays', (t) => {
+//   t.is(
+//     typeof getResolvedAst(`
+//       let a: { hello: string[] } = { hello: [] };
+//       let b: { hello: string; yo: int }[] = [
+//         { hello: "string",  yo: 1 },
+//         { hello: "hey",     yo: 2 }
+//       ];
+//       // b[1] = { hello: "there", yo: 1 };
+//       `),
+//     'string'
+//   );
+// });

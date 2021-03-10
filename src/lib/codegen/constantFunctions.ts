@@ -1,24 +1,28 @@
+import { SubVariableType } from 'tree-sitter-ekscript';
+
 export function genMain(statements: string[]) {
-  return `int main(int argc, char **argv) {
-${statements.join('\n')}
-  return 0;
-}
+  return `int main(int argc, char **argv) {\n  ${statements.join(
+    '\n'
+  )}\n  return 0; }
 `;
 }
 
 export function genFunc(
   name: string,
   statements: string[],
-  args: string[],
-  argTypes: string[],
+  args: Record<string, [argType: string, defaultVal: string | null]>,
   returnType: string,
-  isGlobal: boolean
+  isGlobal = false
 ) {
-  const argWithTypes = args.reduce(
-    (val: string, curr: string, i: number) =>
-      val + `${argTypes[i]} ${curr}` + (i != args.length - 1 ? ', ' : ''),
-    ''
-  );
+  const arrArg = [];
+  const defaultStmts = [];
+  for (const key in args) {
+    const [argType, defaultVal] = args[key];
+    arrArg.push(`${argType} ${key}`);
+    if (defaultVal) defaultStmts.push(`key = ${defaultVal} ;`);
+  }
+  const argWithTypes = arrArg.join(', ');
+  statements = [...defaultStmts, ...statements];
   return `${
     isGlobal ? 'static' : ''
   }${returnType} ${name}(${argWithTypes}) {\n  ${statements.join('\n  ')}\n}`;
@@ -26,127 +30,198 @@ export function genFunc(
 
 export function genStruct(
   name: string,
-  fields: string[],
-  fieldTypes: string[]
+  fields: Record<string, string | SubVariableType>
 ) {
-  const fieldsStr = fields.reduce(
-    (val, curr, i) =>
-      val +
-      fieldTypes[i] +
-      ' ' +
-      curr +
-      ';\n' +
-      (i == fields.length - 1 ? '' : '  '),
-    ''
-  );
-  return `typedef struct {\n  ${fieldsStr}} ${name};`;
+  const arr = [];
+  for (const key in fields) {
+    let fieldVal = fields[key];
+    if (typeof fieldVal != 'string' && fieldVal.typeAlias) {
+      fieldVal = `${fieldVal.typeAlias}*`;
+    }
+    arr.push(`${fieldVal} ${key};`);
+  }
+  return `struct _${name} {\n  ${arr.join('\n  ')}\n};`;
 }
 
 export function genEnum(
   name: string,
-  fields: string[],
-  defaultVal: (string | null)[],
-  typeDefName: string
+  fields: Record<string, string | null> // field: defaultVal
 ) {
-  const modFields = fields.map((field, i) => {
-    let val = field;
-    if (defaultVal[i] != null && defaultVal[i]?.length != 0) {
-      val += '=' + defaultVal[i];
-      if (i != fields.length - 1) val += ',';
-    }
-    return val;
-  });
-  return (
-    (typeDefName ? 'typedef' : '') +
-    `enum ${name} {\n\t${modFields.join('\n\t')}` +
-    (typeDefName ? typeDefName : '') +
-    ';'
-  );
+  const arr: string[] = [];
+  for (const key in fields) {
+    const defaultVal = fields[key];
+    arr.push(`${key}${defaultVal ? ` = ${defaultVal}` : ''},`);
+  }
+  return `typedef enum {\n  ${arr.join('\n  ')}\n} ${name};`;
 }
 
-export function generateArrayUtils(arrType: string) {
+export function generateArrayUtils(arrType: string, subType: string) {
   const arr: string[] = [];
   arr.push(
-    genStruct(
-      `${arrType}_array`,
-      ['length', 'capacity', '*value'],
-      ['size_t', 'size_t', `${arrType}`]
-    )
+    genStruct(`${arrType}`, {
+      length: 'size_t',
+      capacity: 'size_t',
+      value: `${subType}*`,
+    })
   );
 
   // init_array
   arr.push(
     genFunc(
-      `init_${arrType}_array`,
+      `init_${arrType}`,
       [
         'size_t capacity = length;',
         'if (length < 2) capacity = 2;',
-        `${arrType}* value = (${arrType}*)malloc(sizeof(${arrType}) * capacity);`,
-        `return (${arrType}_array){length, capacity, value};`,
+        `${subType}* value = (${subType}*)malloc(sizeof(${subType}) * capacity);`,
+        `return (${arrType}){length, capacity, value};`,
       ],
-      ['length'],
-      ['size_t'],
-      arrType + '_array',
-      false
+      { length: ['size_t', null] },
+      arrType
     )
   );
 
   // push_array, arr.push(value)
   arr.push(
     genFunc(
-      `push_${arrType}_array`,
+      `push_${arrType}`,
       [
         'if (arr->length == arr->capacity) {',
         '  arr->capacity *= 2;',
-        `  arr->value = (${arrType} *)realloc(arr->value, arr->capacity * sizeof(${arrType}));`,
+        `  arr->value = (${subType} *)realloc(arr->value, arr->capacity * sizeof(${subType}));`,
         '}',
         `arr->value[arr->length++] = value;`,
       ],
-      ['*arr', 'value'],
-      [`${arrType}_array`, arrType],
-      'void',
-      false
+      {
+        arr: [`${arrType}*`, null],
+        value: [`${subType}`, null],
+      },
+      'void'
     )
   );
 
   // get_element, arr[index]
   arr.push(
     genFunc(
-      `get_${arrType}_array`,
+      `get_${arrType}`,
       ['if (i >= arr->length) {', '// ERROR', '}', `return arr->value[i];`],
-      ['*arr', 'i'],
-      [`${arrType}_array`, 'size_t'],
-      arrType,
-      false
+      {
+        arr: [`${arrType}*`, null],
+        i: ['size_t', null],
+      },
+      subType
     )
   );
 
   // set_element, arr[index] = value
   arr.push(
     genFunc(
-      `set_${arrType}_array`,
+      `set_${arrType}`,
       ['if (i >= arr->length) {', '// ERROR', '}', `arr->value[i] = value;`],
-      ['*arr', 'i', 'value'],
-      [`${arrType}_array`, 'size_t', arrType],
-      'void',
-      false
+      {
+        arr: [`${arrType}*`, null],
+        i: ['size_t', null],
+        value: [subType, null],
+      },
+      'void'
     )
   );
 
   // destroy_array
   arr.push(
     genFunc(
-      `destroy_${arrType}_array`,
+      `destroy_${arrType}`,
       [
         'free((void*)arr->value);',
         'arr->value = NULL;',
         'arr->capacity = arr->length = 0;',
       ],
-      ['*arr'],
-      [`${arrType}_array`],
-      'void',
-      false
+      { arr: [`${arrType}*`, null] },
+      'void'
     )
   );
   return arr.join('\n');
+}
+
+/**
+ * Generate object, initializer, destructor etc
+ * TODO: add support for array types
+ * */
+export function generateObjectUtils(
+  objectName: string,
+  objType: SubVariableType
+): string {
+  const arr: string[] = [];
+  const objectType: SubVariableType = JSON.parse(JSON.stringify(objType));
+
+  arr.push(genStruct(objectName, objectType.fields as Record<string, string>));
+
+  const fields: Record<string, [string, string | null]> = {};
+  const defaultAlloc: string[] = [];
+
+  for (const fieldName in objectType.fields) {
+    const fieldType = objectType.fields![fieldName];
+    if (typeof fieldType == 'string') fields[fieldName] = [fieldType, null];
+    else fields[fieldName] = [`${fieldType.typeAlias!}*`, null];
+    defaultAlloc.push(`temp->${fieldName} = ${fieldName};`);
+  }
+
+  if (objectType.variableType == 'array') {
+    // Array to get the whole thing going
+    console.log(JSON.stringify(objectType));
+  } else {
+    objectType.subTypes?.forEach((subType) => {
+      const objName = (subType as SubVariableType)?.variableType;
+      const objType = ((subType as SubVariableType)
+        .subTypes as SubVariableType[])[0];
+      arr.push(generateObjectUtils(objName, objType));
+    });
+  }
+
+  const initializer = genFunc(
+    `init_${objectName}`,
+    [
+      `${objectName}* temp = (${objectName} *)malloc(sizeof(${objectName}));`,
+      ...defaultAlloc,
+      `return temp;`,
+    ],
+    fields,
+    `${objectName}*`
+  );
+  // destructor
+  const destructor = genFunc(
+    `destroy_${objectName}`,
+    [`free(obj);`],
+    { obj: [`${objectName}*`, null] },
+    `void`
+  );
+
+  arr.push(initializer, destructor);
+  return arr.join('\n');
+}
+
+export function generateTypeDefs(name: string): string {
+  return `typedef struct _${name} ${name};`;
+}
+
+export function generateFromGenerators(
+  generators: Record<string, SubVariableType>
+) {
+  const arr: string[] = [];
+  for (const key in generators)
+    arr.push(generateTypeDefs(generators[key].typeAlias!));
+  for (const key in generators) {
+    const subVarType = generators[key];
+    if (subVarType.variableType == 'object') {
+      arr.push(generateObjectUtils(subVarType.typeAlias!, subVarType));
+    } else if (subVarType.variableType == 'array') {
+      const subType = subVarType?.subTypes![0];
+      arr.push(
+        generateArrayUtils(
+          subVarType.typeAlias!,
+          typeof subType == 'string' ? subType : subType.typeAlias!
+        )
+      );
+    }
+  }
+  return arr.length > 0 ? arr.join('\n') : '';
 }

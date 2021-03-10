@@ -1,5 +1,10 @@
 import test from 'ava';
 
+import {
+  generateArrayTypeName,
+  generateObjectUtils,
+} from './constantFunctions';
+
 // import { generateArrayUtils, genFunc, genStruct } from './constantFunctions';
 
 test.todo('constant placeholder');
@@ -81,5 +86,105 @@ test.todo('constant placeholder');
 //   string* value = (string*)malloc(sizeof(string) * capacity);
 //   return (string_array){length, capacity, value};
 // }`
+//   );
+// });
+
+// test('Generate Objects', (t) => {
+//   const obj = generateObjectUtils('Sample', {
+//     variableType: 'object',
+//     fields: {
+//       name: 'string',
+//       a: 'int',
+//       yo: {
+//         variableType: 'object',
+//         fields: {
+//           b: 'int',
+//           c: {
+//             variableType: 'object',
+//             fields: {
+//               c: 'int',
+//             },
+//             subTypes: [],
+//             typeAlias: 'obj3',
+//           },
+//         },
+//         typeAlias: 'obj2',
+//         subTypes: [],
+//       },
+//     },
+//     typeAlias: 'obj1',
+//     subTypes: [],
+//   });
+//   t.is(
+//     obj,
+//     [
+//       'struct _Sample {',
+//       '  string name;',
+//       '  int a;',
+//       '  obj2* yo;',
+//       '};',
+//       'Sample* init_Sample(string name, int a, obj2* yo) {',
+//       '  Sample* temp = (Sample *)malloc(sizeof(Sample));',
+//       '  temp->name = name;',
+//       '  temp->a = a;',
+//       '  temp->yo = yo;',
+//       '  return temp;',
+//       '}',
+//       'void destroy_Sample(Sample* obj) {\n  free(obj);\n}',
+//     ].join('\n')
+//   );
+
+//   const obj2 = generateObjectUtils('ArrayBased', {
+//     variableType: 'object',
+//     fields: {
+//       arr: {
+//         variableType: 'array',
+//         fields: {},
+//         subTypes: ['int'],
+//         typeAlias: 'int_array',
+//       },
+//       yo: {
+//         variableType: 'object',
+//         fields: {
+//           a: 'int',
+//         },
+//         subTypes: [],
+//         typeAlias: 'some_obj',
+//       },
+//     },
+//     subTypes: [],
+//   });
+
+//   t.is(
+//     obj2,
+//     [
+//       'struct _ArrayBased {\n  int_array* arr;\n  some_obj* yo;\n};',
+//       'ArrayBased* init_ArrayBased(int_array* arr, some_obj* yo) {',
+//       '  ArrayBased* temp = (ArrayBased *)malloc(sizeof(ArrayBased));',
+//       '  temp->arr = arr;\n  temp->yo = yo;\n  return temp;\n}',
+//       'void destroy_ArrayBased(ArrayBased* obj) {\n  free(obj);\n}',
+//     ].join('\n')
+//   );
+// });
+
+// test('Array Type', (t) => {
+//   t.is(
+//     generateArrayTypeName({
+//       variableType: 'array',
+//       subTypes: ['int'],
+//     }),
+//     'int_array'
+//   );
+//   t.is(
+//     generateArrayTypeName({
+//       variableType: 'array',
+//       subTypes: [
+//         {
+//           variableType: 'array',
+//           subTypes: ['int'],
+//         },
+//       ],
+//     }),
+//     'int_array_array'
 //   );
 // });

@@ -9,7 +9,10 @@ typedef struct {
   size_t length;
 } string;
 const string init_string_str(const char *buf, size_t length) {
-  return (const string){.length = length, .buf = buf};
+  char *s = (char *)malloc(sizeof(char) * (length + 1));
+  strncpy(s, buf, length + 1);
+  s[length] = '\0';
+  return (const string){.buf = s, .length = length};
 }
 const string init_string_string(const string str) {
   char *s = (char *)malloc((str.length + 1) * sizeof(char));
