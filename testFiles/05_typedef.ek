@@ -1,0 +1,2 @@
+type T = { hello: string };
+const d: T = { hello: "Hello World" } ;

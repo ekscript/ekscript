@@ -1,1 +1,5 @@
-let a = { hello: "There" };
+let a = { hello: { yo: "There", hi: [1] } };
+
+let b: { hello: {yo: string, hi: int[]} } = a;
+
+let c = [b, { hello: { yo: "Himu", hi: [11, 22, 34] } }];

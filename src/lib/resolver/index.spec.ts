@@ -1,6 +1,6 @@
 import test from 'ava';
 
-import { getFile } from '../../utils/fileOps';
+import { getFile } from '../utils/fileOps';
 import Compiler from '../compiler';
 
 import 'ts-replace-all';
@@ -18,12 +18,13 @@ const getResolvedAst = (code: string) =>
 
 const cleanStr = (s: string) => s.replaceAll(/\s+/g, ' ').trim();
 
+// @ts-ignore
 const getFileCodes = (fileName: string): [string, string] => {
   const genAst = getResolvedAst(
     getFile(`./testFiles/tree-sitter-ast/${fileName}.ek`)
   );
   const expectedAst = cleanStr(
-    getFile(`./testFiles/tree-sitter-ast/${fileName}.txt`)
+    getFile(`./testFiles/tree-sitter-ast/${fileName}.c`)
   );
   return [genAst, expectedAst];
 };
@@ -193,6 +194,13 @@ test.todo('Some TODO tasks');
 //       ];
 //       // b[1] = { hello: "there", yo: 1 };
 //       `),
+//     'string'
+//   );
+// });
+
+// test('typedef', (t) => {
+//   t.is(
+//     typeof getResolvedAst(`type T = string; const str: T = "hello";`),
 //     'string'
 //   );
 // });

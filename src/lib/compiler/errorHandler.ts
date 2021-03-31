@@ -1,5 +1,5 @@
 import { int } from '../../global.d';
-import { TCompilerError } from '../../types/compiler.d';
+import { TCompilerError } from '../../types/compiler';
 
 export enum TCompilerErrorType {
   RUNTIME_ERROR,

@@ -13,3 +13,14 @@ export const setFile = (filePath: string, fileContents: string) => {
     console.error(e);
   }
 };
+
+export const logFactory = (fileName: string, functionName?: string) => {
+  return (...args: any[]) =>
+    console.log(
+      '\x1b[34m',
+      path.basename(fileName),
+      functionName ? `> ${functionName}` : '',
+      '\x1b[0m >',
+      ...args
+    );
+};

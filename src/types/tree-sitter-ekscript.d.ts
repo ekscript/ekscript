@@ -1,4 +1,9 @@
 declare module 'tree-sitter-ekscript' {
+  export enum IVarKind {
+    variable,
+    typeDef,
+  }
+
   export interface Parser {
     parse(
       input: string | Input,
@@ -43,10 +48,7 @@ declare module 'tree-sitter-ekscript' {
     read(): any;
   }
 
-  export const enum IVarKind {
-    variable,
-    typeDef,
-  }
+  
 
   interface SyntaxNodeBase {
     tree: Tree;
@@ -1186,7 +1188,7 @@ declare module 'tree-sitter-ekscript' {
     conditionNode: ParenthesizedExpressionNode;
   }
 
-  export interface ElseClauseNode extends NamedNodeBase {
+  export interface ElseClauseNode extends ScopeContainer {
     type: SyntaxType.ElseClause;
   }
 
@@ -1550,7 +1552,7 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.ObjectPattern;
   }
 
-  export interface ObjectTypeNode extends NamedNodeBase {
+  export interface ObjectTypeNode extends ValueNode {
     type: SyntaxType.ObjectType;
   }
 
@@ -1600,7 +1602,7 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.Program;
   }
 
-  export interface PropertySignatureNode extends NamedNodeBase {
+  export interface PropertySignatureNode extends ValueNode {
     type: SyntaxType.PropertySignature;
     nameNode:
       | ComputedPropertyNameNode
@@ -1661,7 +1663,7 @@ declare module 'tree-sitter-ekscript' {
   }
 
   export interface ScopeContainer extends NamedNodeBase {
-    env: Record<string, IdentifierNode>;
+    env: Record<string, IdentifierNode | TypeIdentifierNode>;
     destructors: Record<string, string>; // { variableName: string }
   }
 
@@ -1729,7 +1731,7 @@ declare module 'tree-sitter-ekscript' {
     type: SyntaxType.TupleType;
   }
 
-  export interface TypeAliasDeclarationNode extends NamedNodeBase {
+  export interface TypeAliasDeclarationNode extends ValueNode {
     type: SyntaxType.TypeAliasDeclaration;
     nameNode: TypeIdentifierNode;
     type_parametersNode?: TypeParametersNode;
@@ -1849,7 +1851,7 @@ declare module 'tree-sitter-ekscript' {
 
   export interface SubVariableType {
     variableType: string;
-    subTypes: (string | SubVariableType)[] | null;
+    subTypes?: (string | SubVariableType)[];
     fields?: Record<string, SubVariableType | string>;
     // if null, then go for fields/subTypes else use this name directly
     typeAlias?: string;
@@ -1942,5 +1944,7 @@ declare module 'tree-sitter-ekscript' {
 
   export interface TypeIdentifierNode extends ValueNode {
     type: SyntaxType.TypeIdentifier;
+    kind: IVarKind;
+    isConst: true;
   }
 }

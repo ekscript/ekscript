@@ -1,16 +1,19 @@
 import {
   IdentifierNode,
-  StatementBlockNode,
+  ScopeContainer,
   SubVariableType,
   SyntaxNode,
 } from 'tree-sitter-ekscript';
 
-import { FuncGenType } from '../types/compiler';
+import { FuncGenType } from '../../types/compiler';
 
 export const matchLiteralType = (lit: string) =>
   lit == 'int_literal' ||
   lit == 'bigint_literal' ||
   lit == 'float_literal' ||
+  lit == 'int' ||
+  lit == 'float' ||
+  lit == 'boolean' ||
   lit == 'char' ||
   lit == 'string' ||
   lit == 'null' ||
@@ -28,11 +31,12 @@ export function getEnvValueRecursively(
 ): IdentifierNode | null {
   if (node == null) return null;
   if (
-    node!.type == 'statement_block' ||
-    node!.type == 'program' ||
-    node.type == 'for_statement'
+    node.type == 'statement_block' ||
+    node.type == 'program' ||
+    node.type == 'for_statement' ||
+    node.type == 'else_clause'
   ) {
-    const theEnv = (node as StatementBlockNode)?.env;
+    const theEnv = (node as ScopeContainer)?.env;
     if (theEnv[identifierName] != null) {
       return theEnv[identifierName];
     }

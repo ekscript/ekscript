@@ -1,3 +1,11 @@
+/**
+* ===================================
+* C Generator backend for EkScript
+* --- 
+* This is the C Generator Backend for EkScript 
+* ===================================
+* */
+
 import {
   ArrayNode,
   AssignmentExpressionNode,
@@ -30,6 +38,7 @@ import {
   SyntaxNode,
   Tree,
   TypeAnnotationNode,
+  TypeAliasDeclarationNode,
   UnaryExpressionNode,
   ValueNode,
   VariableDeclaratorNode,
@@ -40,10 +49,11 @@ import { FuncGenType, TCompilerError, Visitor } from 'types/compiler';
 import {
   matchLiteralType,
   stitchFunctions,
-} from '../../utils/codegenResolverUtils';
-import { loopNamedNodeChild, loopNodeChildren } from '../../utils/iterators';
-import { removeUnderscore } from '../../utils/number';
+} from '../utils/codegenResolverUtils';
+import { loopNamedNodeChild, loopNodeChildren } from '../utils/iterators';
+import { removeUnderscore } from '../utils/number';
 import { TCompilerErrorType } from '../compiler/errorHandler';
+import { visitBinaryExpr } from './binaryExprGen'
 
 import { generateFromGenerators } from './constantFunctions';
 
@@ -66,7 +76,7 @@ class CodeGen implements Visitor<SyntaxNode> {
   private indentLevel = 0;
 
   private functions: FuncGenType[] = [];
-  private currentFunc: FuncGenType = {
+  currentFunc: FuncGenType = {
     name: 'main',
     returnType: 'int',
     body: [],
@@ -76,9 +86,12 @@ class CodeGen implements Visitor<SyntaxNode> {
     ],
     destructors: [],
   };
-  private numTempVars = 0;
+  numTempVars = 0;
 
-  private currentScope: ScopeContainer;
+  currentScope: ScopeContainer;
+
+  private specialFlag = false;
+  private specialLine: string[] = [];
 
   constructor(
     private ast: Tree,
@@ -110,7 +123,6 @@ class CodeGen implements Visitor<SyntaxNode> {
 
   getFinalCode = () => {
     const stiched = stitchFunctions(this.functions);
-    // console.log(JSON.stringify(this.generators, null, '  '));
     return [
       ...this.includes,
       generateFromGenerators(this.generators),
@@ -120,15 +132,21 @@ class CodeGen implements Visitor<SyntaxNode> {
   };
 
   addLine() {
-    if (this.currLine.length != 0) {
-      this.currentFunc.body.push(this.indent + this.currLine.join(' '));
+    if (!this.specialFlag) {
+      if (this.currLine.length != 0) {
+        this.currentFunc.body.push(this.indent + this.currLine.join(' '));
+      }
+      this.singleLineStart = false;
     }
-    this.singleLineStart = false;
   }
 
   addCol(col: string) {
     if (this.singleLineStart && col.length != 0) {
-      this.currLine.push(col);
+      if (this.specialFlag) {
+        this.specialLine.push(col);
+      } else {
+        this.currLine.push(col);
+      }
     }
   }
 
@@ -264,6 +282,10 @@ class CodeGen implements Visitor<SyntaxNode> {
         this.visitLexicalDecl(node as LexicalDeclarationNode);
         break;
       }
+      case 'type_alias_declaration': {
+        this.visitTypeAliasDeclaration(node as TypeAliasDeclarationNode);
+        break;
+      }
       default: {
         console.log('--->', node?.toString());
         throw new Error('Error compiling some weird shit!');
@@ -331,19 +353,23 @@ class CodeGen implements Visitor<SyntaxNode> {
   }
 
   visitElseClause(node: ElseClauseNode) {
+    this.currentScope = node;
     const consequence = node.firstNamedChild!;
+    this.addCol('{');
+    this.addLine();
+    this.indentLevel++;
     if (consequence.type == 'expression_statement') {
-      this.addCol('{');
-      this.addLine();
-      this.indentLevel++;
       this.singleLineStart = true;
       this.visitExprStmt(consequence as ExpressionStatementNode);
       this.singleLineStart = true;
-      this.indentLevel--;
-      this.addCol('}');
     } else {
       this.visit(consequence);
     }
+    this.addDestructors(node);
+    this.indentLevel--;
+    this.singleLineStart = true;
+    this.addCol('}');
+    this.addLine();
   }
 
   visitWhileStmt(node: WhileStatementNode) {
@@ -430,6 +456,7 @@ class CodeGen implements Visitor<SyntaxNode> {
     this.indentLevel++;
 
     for (const { child } of loopNamedNodeChild(node)) this.visit(child);
+    this.currentScope = node;
     this.addDestructors(node);
 
     this.indentLevel--;
@@ -480,12 +507,12 @@ class CodeGen implements Visitor<SyntaxNode> {
   // TODO: identifier type through the syntaxnode.
   // cases: let i; let i: string; let i = 'hello'; let i: string = 'hello';
   // let i: string = 'hello', i: int = 1
-  visitLexicalDecl(node: LexicalDeclarationNode, nextLine = true) {
+  visitLexicalDecl(node: LexicalDeclarationNode) {
     for (const { child } of loopNamedNodeChild(node))
-      this.visitVariableDeclarator(child as VariableDeclaratorNode, nextLine);
+      this.visitVariableDeclarator(child as VariableDeclaratorNode);
   }
 
-  visitVariableDeclarator(node: VariableDeclaratorNode, nextLine = true) {
+  visitVariableDeclarator(node: VariableDeclaratorNode) {
     this.singleLineStart = true;
 
     if (node.isConst) {
@@ -499,15 +526,13 @@ class CodeGen implements Visitor<SyntaxNode> {
     if (valueNode?.variableType == 'boolean') this.addInclude('stdbool');
 
     if (node.variableType == 'array') {
-      // this.addInclude('stdlib');
-      this.addInclude('ekarray');
-      const array_name = ((node as SyntaxNode) as ArrayNode).subVariableType
-        ?.typeAlias;
-      this.addCol(
-        `${array_name} ${idName} = init_${array_name} ( ${valueNode?.namedChildCount} ) ;`
-      );
-      this.addLine();
-      this.visitArray(valueNode as ArrayNode, idName);
+      this.addInclude('stdlib');
+      // @ts-ignore
+      const array_name = node.subVariableType?.typeAlias;
+      this.addCol(`${array_name}`);
+    } else if (node.variableType == 'object') {
+      const typeAlias = node?.subVariableType?.typeAlias;
+      this.addCol(typeAlias + '*');
     } else {
       if (node.variableType == 'boolean') this.addCol('bool');
       else this.addCol(node.variableType);
@@ -515,54 +540,51 @@ class CodeGen implements Visitor<SyntaxNode> {
 
     this.addCol(idName);
     this.addCol('=');
-    const lastChild = node.lastNamedChild!;
 
-    if (
-      matchLiteralType(lastChild.type) ||
-      lastChild.type == 'identifier' ||
-      lastChild.type == 'parenthesized_expression'
-    ) {
-      if (valueNode?.type == 'string') {
-        this.addInclude('ekstr');
-        this.addCol(
-          `init_string ( ${valueNode.text}, ${valueNode.text.length - 2} )`
-        );
-      } else this.visit(valueNode!);
-    } else {
-      if (lastChild.type == 'binary_expression') {
-        const { leftNode, rightNode } = lastChild as BinaryExpressionNode;
+    if (valueNode != null) {
+      if (
+        matchLiteralType(valueNode.type) ||
+        valueNode.type == 'identifier' ||
+        valueNode.type == 'parenthesized_expression'
+      ) {
+        if (valueNode.type == 'string') this.addInclude('ekstr');
+        this.visit(valueNode);
+      } else {
+        // for arrays and objects
         if (
-          lastChild.variableType == 'string' &&
-          rightNode.type != 'identifier'
+          valueNode.type == 'binary_expression' &&
+          valueNode.variableType == 'string'
         ) {
-          this.addInclude('ekstr');
-          this.addCol('init_string (');
-          this.visit(lastChild);
-          this.addCol(
-            `, ${leftNode.text.length - 2 + rightNode.text.length} )`
-          );
-        } else {
-          this.visit(lastChild);
+          const { rightNode, leftNode } = valueNode;
+          if (rightNode.type == 'identifier' || leftNode.type == 'identifier') {
+            this.currentScope.destructors[idName] = 'string';
+          }
         }
+        this.visit(valueNode);
       }
+    } else {
+      console.error(':549: ', 'ERROR. valueNode == null');
     }
 
     this.addCol(';');
-    if (nextLine) this.addLine();
+    this.addLine();
   }
 
   visitTypeAnnotation(node: TypeAnnotationNode) {
-    console.log(node.toString());
+    node;
+    // visitTypeAnnotation(this, node);
+  }
+
+  visitTypeAliasDeclaration(node: TypeAliasDeclarationNode) {
+    this.singleLineStart = true;
+    const { variableType, nameNode } = node;
+    this.addCol(`typedef ${variableType} ${nameNode.text} ;`)
+    this.addLine();
   }
 
   // ------ Expression visitor -------
   visitAssignmentExpr(node: AssignmentExpressionNode) {
     const { leftNode, rightNode } = node;
-    if (leftNode.variableType == 'string') {
-      this.currentFunc.body.push(
-        `${this.indent}destroy_string ( ${leftNode.text} ) ;`
-      );
-    }
     this.visit(leftNode);
     this.addCol('=');
     if (rightNode.type == 'string') {
@@ -575,88 +597,7 @@ class CodeGen implements Visitor<SyntaxNode> {
   }
 
   visitBinaryExpr(node: BinaryExpressionNode) {
-    const left = node.leftNode as ValueNode;
-    const operator = node.operatorNode;
-    const right = node.rightNode as ValueNode;
-
-    if (left?.type == 'string') {
-      this.addInclude('ekstr');
-      let rightType: string = right?.type!;
-      switch (rightType) {
-        case 'int_literal':
-        // @ts-ignore
-        case 'float_literal': {
-          rightType = rightType.slice(0, rightType.length - 8);
-        }
-        case 'true':
-        case 'false':
-        case 'null':
-        case 'char':
-        case 'string': {
-          let rightText = right?.text!;
-          const leftText = left.text.slice(1, left.text.length - 1);
-          if (rightType == 'string' || rightType == 'char')
-            rightText = rightText.slice(1, rightText.length - 1);
-          this.addCol(`"${leftText}${rightText}"`);
-          break;
-        }
-        case 'parenthesized_expression':
-        case 'identifier': {
-          const identifierType = right.variableType;
-          const tempVar = 'temp' + ++this.numTempVars;
-          const stringInit = `const string ${tempVar} = init_string( ${
-            left.text
-          }, ${left.text.length - 2} ) ;`;
-          this.currentScope.destructors[tempVar] = 'string';
-          this.currentFunc.body.push(this.indent + stringInit);
-          this.addCol(
-            `concat_string_${identifierType}( ${tempVar}, ${right?.text})`
-          );
-          break;
-        }
-        default:
-      }
-    } else {
-      switch (operator.text) {
-        case '+': {
-          if (left.variableType == 'string' && right.variableType == 'string') {
-            if (right.type == 'string') this.addCol('concat_string_char (');
-            else if (right.type == 'identifier') this.addCol(')');
-            this.visit(left);
-            this.addCol(',');
-            this.visit(right);
-            this.addCol(')');
-          } else {
-            this.visit(left as SyntaxNode);
-            this.addCol(operator.text);
-            this.visit(right as SyntaxNode);
-          }
-          break;
-        }
-        case '==': {
-          if (left.variableType == 'string' && right.variableType == 'string') {
-            if (right.type == 'string') this.addCol('compare_string_char (');
-            else if (right.type == 'identifier') this.addCol(')');
-            this.visit(left);
-            this.addCol(',');
-            this.visit(right);
-            if (right.type == 'string')
-              this.addCol(`, ${right.text.length - 2}`);
-            this.addCol(')');
-          } else {
-            this.visit(left as SyntaxNode);
-            this.addCol(operator.text);
-            this.visit(right as SyntaxNode);
-          }
-          break;
-        }
-        default:
-          this.visit(left);
-          this.addCol(operator.text);
-          this.visit(right);
-          break;
-      }
-    }
+    visitBinaryExpr(this, node);    
   }
 
   visitParenExpr(node: ParenthesizedExpressionNode) {
@@ -689,47 +630,57 @@ class CodeGen implements Visitor<SyntaxNode> {
   }
 
   // ----- literal and identifier -----
-  visitArray(node: ArrayNode, varName = '') {
+  visitArray(node: ArrayNode) {
     this.singleLineStart = true;
 
+    this.addInclude('stdlib');
+
+    // HERE IS THE ERROR
     const array_name = node.subVariableType.typeAlias;
 
-    for (const { child } of loopNamedNodeChild(node)) {
-      this.singleLineStart = true;
-      switch (child.type) {
-        case 'array': {
-          const temp = `temp${this.numTempVars++}`;
-          const childArrName = (child as ArrayNode).subVariableType.typeAlias;
-          this.addCol(
-            `${childArrName} ${temp} = init_${childArrName} ( ${child.namedChildCount} ) ;`
-          );
-          this.addLine();
-          this.visitArray(child as ArrayNode, temp);
-          this.singleLineStart = true;
-          this.addCol(`push_${array_name} ( ${varName}, ${temp} ) ;`);
-          break;
-        }
-        case 'string': {
-          const temp = `temp${this.numTempVars++}`;
-          this.addString(child.text, temp);
-          this.addCol(`push_${array_name} ( ${varName}, ${temp} ) ;`);
-          break;
-        }
-        default: {
-          this.singleLineStart = true;
-          this.addCol(`push_${array_name} ( ${varName},`);
-          this.visit(child);
-          this.addCol(') ;');
-          break;
-        }
-      }
-      this.addLine();
+    const varName = `temp${this.numTempVars++}`;
+
+    this.addToCurrentFunc(
+      `${array_name} ${varName} = init_${array_name} ( ${node.namedChildCount} ) ;`
+    );
+
+    for (const { child, i } of loopNamedNodeChild(node)) {
+      this.visit(child);
+      this.addToCurrentFunc(
+        `${varName}.value[${i}] = ${this.currLine.pop()} ;`
+      );
     }
+
+    this.addCol(varName);
   }
 
   visitObject(node: ObjectNode) {
-    console.log(node.variableType);
-    console.log(node.subVariableType);
+    const objectType = node?.subVariableType?.typeAlias;
+
+    if (objectType) {
+      const varName = `temp${this.numTempVars++}`;
+
+      this.addToCurrentFunc(
+        `${objectType}* ${varName} = init_${objectType} () ;`
+      );
+      // this.addCol(`init_${} (`);
+
+      for (const { child } of loopNamedNodeChild(node)) {
+        const key = child.firstNamedChild;
+        const value = child.lastNamedChild;
+        if (value != null && key != null) {
+          if (value) this.visit(value);
+          this.addToCurrentFunc(
+            `${varName}->${key.text} = ${this.currLine.pop()} ;`
+          );
+        } else {
+          this.addError(child, 'key/value might possibly be null');
+        }
+      }
+      this.addCol(varName);
+    } else {
+      this.addError(node, 'Object type not declared. Error while generation');
+    }
   }
 
   visitChar(node: CharNode) {
@@ -756,17 +707,21 @@ class CodeGen implements Visitor<SyntaxNode> {
   addString(str: string, varName: string) {
     this.addInclude('ekstr');
     this.currentFunc.body.push(
-      `${this.indent}string ${varName} = init_string ( ${str}, ${
+      `${this.indent}const string ${varName} = init_string ( ${str}, ${
         str.length - 2
       } ) ;`
     );
-    this.addLine();
-    this.singleLineStart = true;
     this.currentScope.destructors[varName] = 'string';
   }
 
+  addToCurrentFunc(str: string) {
+    this.currentFunc.body.push(this.indent + str);
+  }
+
   visitString(node: StringNode) {
-    this.addCol(node.text);
+    const varName = `temp${this.numTempVars++}`;
+    this.addString(node.text, varName);
+    this.addCol(varName);
   }
 
   visitIdentifier(node: IdentifierNode) {

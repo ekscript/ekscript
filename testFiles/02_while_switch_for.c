@@ -1,5 +1,6 @@
 #include<stdbool.h>
 #include<ekstr.h>
+
 int main(int argc, char **argv) {
   int a = 10 ;
   {
@@ -16,10 +17,11 @@ int main(int argc, char **argv) {
   int i = 0 ;
   {
     int i = 0 ;
-    string j = init_string ( "hello", 5 ) ;
+    const string temp0 = init_string ( "hello", 5 ) ;
+    string j = temp0 ;
     for ( ; i < 10 , a < 20 ; i = i + 1 ) {
     }
-    destroy_string ( j ) ;
+    destroy_string ( temp0 ) ;
   }
   switch ( a ) {
     case 1 : break ;

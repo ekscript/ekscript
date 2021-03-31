@@ -56,6 +56,7 @@ export interface Visitor<T, R = void> {
 
   // type literals and expressions
   visitTypeAnnotation(node: T): R;
+  visitTypeAliasDeclaration(node: T): R;
 
   // expressions
   visitParenExpr(node: T): R;
@@ -76,4 +77,9 @@ export type FuncGenType = {
   funcArgs: [argType: string, argName: string][];
   body: string[];
   destructors: string[];
+};
+
+export enum IVarKind {
+  variable,
+  typeDef,
 };

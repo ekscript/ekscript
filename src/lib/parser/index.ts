@@ -15,7 +15,7 @@ import TSParser from 'tree-sitter';
 import TSEk from 'tree-sitter-ekscript';
 
 import { TCompilerError, TCompilerSource } from '../../types/compiler';
-import { getFile } from '../../utils/fileOps';
+import { getFile } from '../utils/fileOps';
 import { TCompilerErrorType } from '../compiler/errorHandler';
 
 // ----------------------------------------

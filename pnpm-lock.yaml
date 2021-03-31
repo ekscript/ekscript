@@ -1,6 +1,6 @@
 dependencies:
-  tree-sitter: 0.17.1
-  tree-sitter-ekscript: 0.2.13
+  tree-sitter: 0.19.0
+  tree-sitter-ekscript: 0.3.0
   ts-replace-all: 1.0.0
 devDependencies:
   '@asgerf/dts-tree-sitter': 0.1.0
@@ -1030,8 +1030,16 @@ packages:
       buffer: 5.7.1
       inherits: 2.0.4
       readable-stream: 3.6.0
+    dev: true
     resolution:
       integrity: sha512-fs4G6/Hu4/EE+F75J8DuN/0IpQqNjAdC7aEQv7Qt8MHGUH7Ckv2MwTEEeN9QehD0pfIDkMI1bkHYkKy7xHyKIg==
+  /bl/4.1.0:
+    dependencies:
+      buffer: 5.7.1
+      inherits: 2.0.4
+      readable-stream: 3.6.0
+    resolution:
+      integrity: sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==
   /blueimp-md5/2.18.0:
     dev: true
     resolution:
@@ -4454,11 +4462,11 @@ packages:
     dev: true
     resolution:
       integrity: sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==
-  /node-abi/2.19.3:
+  /node-abi/2.21.0:
     dependencies:
       semver: 5.7.1
     resolution:
-      integrity: sha512-9xZrlyfvKhWme2EXFKQhZRp1yNWT/uI1luYPr3sFl+H4keYY4xR+1jO7mvTTijIsHf1M+QDe9uWuKeEpLInIlg==
+      integrity: sha512-smhrivuPqEM3H5LmnY3KU6HfYv0u4QklgAxfFyRNujKUzbUcYZ+Jc2EhukB9SRcD2VpqhxM7n/MIcp1Ua1/JMg==
   /node-fetch/2.6.1:
     dev: true
     engines:
@@ -5100,7 +5108,7 @@ packages:
       minimist: 1.2.5
       mkdirp-classic: 0.5.3
       napi-build-utils: 1.0.2
-      node-abi: 2.19.3
+      node-abi: 2.21.0
       noop-logger: 0.1.1
       npmlog: 4.1.2
       pump: 3.0.0
@@ -6133,7 +6141,7 @@ packages:
       integrity: sha512-V0r2Y9scmbDRLCNex/+hYzvp/zyYjvFbHPNgVTKfQvVrb6guiE/fxP+XblDNR011utopbkex2nM4dHNV6GDsng==
   /tar-stream/2.2.0:
     dependencies:
-      bl: 4.0.3
+      bl: 4.1.0
       end-of-stream: 1.4.4
       fs-constants: 1.0.0
       inherits: 2.0.4
@@ -6284,14 +6292,14 @@ packages:
       node: '>=0.1.98'
     resolution:
       integrity: sha512-wnQcqlreS6VjthyHO3Y/kpK/emflxDBNhlNUPfh7wE39KnuDdOituXomIbyI79vBtF0Ninpkh72mcuRHo+RG3Q==
-  /tree-sitter-ekscript/0.2.13:
+  /tree-sitter-ekscript/0.3.0:
     dependencies:
       nan: 2.14.2
-      tree-sitter: 0.17.1
+      tree-sitter: 0.19.0
     dev: false
     requiresBuild: true
     resolution:
-      integrity: sha512-h6JInffaBBCI/Px8m9ys8Dt6mGd33qbIuWqWzoQoQUxckByORlenDxH952St1A1el84dzEoCPwiSiWiVxSr/yw==
+      integrity: sha512-BY5zdd93REimwDiNoVF9iVPLL4pKqxEZ6vv+aDfAxJKKomQ8VeeHa5ZiES5qF7m3RjtQ+ilzjvqnOYULVFNLJw==
   /tree-sitter/0.16.2:
     dependencies:
       nan: 2.14.2
@@ -6300,14 +6308,14 @@ packages:
     requiresBuild: true
     resolution:
       integrity: sha512-1d9oNXVUWJGzpPyTwI7qBHoGZYLD4BU04bHSxj9PqRgR3URY8fXqk2LhFCu7AFBDQHifcinMxss5CqYXCTGcLQ==
-  /tree-sitter/0.17.1:
+  /tree-sitter/0.19.0:
     dependencies:
       nan: 2.14.2
       prebuild-install: 5.3.6
     dev: false
     requiresBuild: true
     resolution:
-      integrity: sha512-obIe804bwfAGFMhTjQz0NXF75GDupCVXo7Sv0NVVdA3s/Q4ZI4mdirIN8cpw6bVhz/K1qgUdEuI3SEoOE/q75A==
+      integrity: sha512-jw/BNCCRB9RCq/GFGU0VuhchGlIIlYRQFnjXgPKG3fBIo+c3ImuPITtAHJJ4XgTBNfeAQmt8XC4wShgBw8tgdg==
   /trim-newlines/1.0.0:
     dev: true
     engines:
@@ -6805,8 +6813,8 @@ specifiers:
   open-cli: ^6.0.1
   prettier: ^2.1.1
   standard-version: ^9.0.0
-  tree-sitter: ^0.17.1
-  tree-sitter-ekscript: ^0.2.13
+  tree-sitter: ^0.19.0
+  tree-sitter-ekscript: ^0.3.0
   ts-node: ^9.0.0
   ts-replace-all: ^1.0.0
   typedoc: ^0.19.0

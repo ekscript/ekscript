@@ -9,7 +9,7 @@ import { SubVariableType, Tree } from 'tree-sitter-ekscript';
 
 // ------------- Regular Imports ---------
 import { TCompilerError, TCompilerSource } from '../../types/compiler';
-import { setFile } from '../../utils/fileOps';
+import { setFile } from '../utils/fileOps';
 import CodeGen from '../codegen';
 import Parser from '../parser';
 import Resolver from '../resolver';
@@ -26,8 +26,8 @@ export default class Compiler {
   private parser: Parser;
   private output = '';
 
-  private errors: TCompilerError[] = [];
-  private warnings: TCompilerError[] = [];
+  errors: TCompilerError[] = [];
+  warnings: TCompilerError[] = [];
 
   private _tree: Tree | null = null;
 
@@ -61,14 +61,10 @@ export default class Compiler {
       this.warnings
     ).visit(this.tree?.rootNode!).generators;
 
-    // console.log('>==');
-    // console.log(JSON.stringify(resolver.generators, null, '    '));
-    // console.log('==<');
-
     // printWarnings(this.warnings);
     if (this.errors.length) {
       // printErrors(this.errors);
-      throw new Error('Compilation Failed');
+      throw new Error(JSON.stringify(this.errors));
     }
     return this;
   }
@@ -76,6 +72,7 @@ export default class Compiler {
   get tree() {
     return this._tree;
   }
+
 
   generateCode(tree?: Tree): string {
     const codegen = new CodeGen(

@@ -1,4 +1,4 @@
-declare module 'tree-sitter' {
+declare module 'tree-sitter2' {
   class Parser {
     parse(
       input: string | Parser.Input,
