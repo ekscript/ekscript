@@ -164,7 +164,7 @@ export function mirrorAnonNameInComplexTypes(
   src: SubVariableType,
   des: SubVariableType
 ): string[] {
-  const arr: string[] = [];
+  let arr: string[] = [];
   if (src && des) {
     if (src.variableType == 'object') {
       if (src.typeAlias) des.typeAlias = src.typeAlias;
@@ -188,8 +188,10 @@ export function mirrorAnonNameInComplexTypes(
         if (
           typeof src.subTypes[0] != 'string' &&
           typeof des.subTypes[0] != 'string'
-        )
-          mirrorAnonNameInComplexTypes(src.subTypes[0], des.subTypes[0]);
+        ) {
+          const res = mirrorAnonNameInComplexTypes(src.subTypes[0], des.subTypes[0]);
+          arr = [...arr, ...res];
+        }
       }
     }
   }

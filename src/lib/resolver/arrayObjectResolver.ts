@@ -3,7 +3,7 @@ import {
   SubVariableType,
   ObjectNode,
   ValueNode,
-  PairNode
+  PairNode,
 } from 'tree-sitter-ekscript';
 import Resolver from './index';
 import { loopNamedNodeChild } from '../utils/iterators';
@@ -12,10 +12,13 @@ import {
   compareVariableTypes,
 } from '../utils/codegenResolverUtils';
 
+import { logFactory } from '../utils/fileOps';
+const log = logFactory(__filename);
+
 /**
- * @param {resolver} Resolver class instance
- * @param {node} ArrayNode that is to be processed
- * @param {generator} flag for whether to generate array structs
+ * @param Resolver class instance
+ * @param ArrayNode that is to be processed
+ * @param generator flag for whether to generate array structs
  * */
 export function visitArray(
   resolver: Resolver,
@@ -33,12 +36,12 @@ export function visitArray(
   const complexFieldTypes: SubVariableType[] = []; // this is specially relevant for tuples: later
   const stringFieldTypes = new Set<string>(); // basic types: int, float, string, boolean, null
 
-  let generatorMod = generator;
+  // let generatorMod = generator;
 
-  for (const { child } of loopNamedNodeChild(node)) {
-    // if one of the child is an identifier, simply ignore
-    if (child.type == 'identifier') generatorMod = false;
-  }
+  // for (const { child } of loopNamedNodeChild(node)) {
+  //   // if one of the child is an identifier, simply ignore
+  //   if (child.type == 'identifier') generatorMod = false;
+  // }
 
   for (const { child } of loopNamedNodeChild(node)) {
     if (child.type == 'comment') continue;
@@ -56,7 +59,6 @@ export function visitArray(
           const varB = complexFieldTypes[i];
           if (
             compareVariableTypes(
-              // compare the child with all the other types of the array
               (child as ValueNode).variableType,
               (child as ValueNode).subVariableType,
               varB.variableType,
@@ -68,7 +70,7 @@ export function visitArray(
           }
         }
         const subVarType = (child as ValueNode).subVariableType;
-        // if subVarType is present, throw the type to complexFieldTypes
+        // if subVarType is present, push the type to complexFieldTypes
         if (!isPresent && subVarType) complexFieldTypes.push(subVarType);
         break;
       }
@@ -79,6 +81,7 @@ export function visitArray(
       }
     }
   }
+
 
   if (complexFieldTypes.length == 0 && stringFieldTypes.size == 0) return;
 
@@ -99,14 +102,13 @@ export function visitArray(
           subV,
           (child as ValueNode).subVariableType
         );
-        duplicates.forEach((dup) => { delete resolver._generators[dup] });
+        duplicates.forEach((dup) => delete resolver._generators[dup]);
       }
     }
   }
 
   if (generator) resolver._generators[typeAlias] = subVariableType;
 }
-
 
 /*
  * @param {resolver} Resolver class

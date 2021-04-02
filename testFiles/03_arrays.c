@@ -5,8 +5,6 @@ typedef struct _anon_array2 anon_array2;
 typedef struct _anon_array3 anon_array3;
 typedef struct _anon_array4 anon_array4;
 typedef struct _anon_array5 anon_array5;
-typedef struct _anon_array6 anon_array6;
-
 
 
 
@@ -32,8 +30,9 @@ int main(int argc, char **argv) {
   const string temp6 = init_string ( "yo", 2 ) ;
   temp4.value[1] = temp6 ;
   anon_array4 arr2 = temp4 ;
-  anon_array6 temp7 = init_anon_array6 ( 0 ) ;
-  anon_array6 arr4 = temp7 ;
+  anon_array5 temp7 = init_anon_array5 ( 1 ) ;
+  temp7.value[0] = arr2 ;
+  anon_array5 arr4 = temp7 ;
   destroy_string ( temp5 ) ;
   destroy_string ( temp6 ) ;
   return 0;

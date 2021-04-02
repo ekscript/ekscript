@@ -1,3 +1,9 @@
+/**
+* ====================
+* Resolves the types
+* ====================
+* */
+
 import Resolver from './index';
 import {
   IdentifierNode,
@@ -38,12 +44,12 @@ export function visitObjectType(
       child.variableType = typeNode.variableType;
       (child as ValueNode).subVariableType = typeNode.subVariableType;
 
-      log(
-        nameNode.text,
-        typeNode?.firstNamedChild?.type,
-        typeNode.variableType,
-        typeNode.subVariableType
-      );
+      // log(
+      //   nameNode.text,
+      //   typeNode?.firstNamedChild?.type,
+      //   typeNode.variableType,
+      //   typeNode.subVariableType
+      // );
 
       if (typeNode?.firstNamedChild?.type == 'predefined_type') {
         subVariableType.fields[nameNode.text] = typeNode.variableType;
@@ -61,7 +67,6 @@ export function visitArrayType(
   node: ArrayTypeNode,
   generator = false
 ) {
-  log(node.toString());
   const mainType = node.firstNamedChild as ValueNode;
   visitTypeAnnotation(
     resolver,
@@ -71,7 +76,7 @@ export function visitArrayType(
   node.variableType = 'array';
   node.subVariableType = { subTypes: [], variableType: 'array' };
 
-  if (generator && node.subVariableType) {
+  if (generator) {
     const typeAlias = `anon_array${resolver.counter++}`;
     node.subVariableType.typeAlias = typeAlias;
     resolver._generators[typeAlias] = node.subVariableType;

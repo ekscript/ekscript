@@ -1,12 +1,12 @@
 import {
+  DestructuringPatternNode,
+  ExpressionNode,
   IdentifierNode,
   IVarKind as IIVarKind,
   SubVariableType,
+  TypeAnnotationNode,
   ValueNode,
   VariableDeclaratorNode,
-  DestructuringPatternNode,
-  TypeAnnotationNode,
-  ExpressionNode
 } from 'tree-sitter-ekscript';
 
 import { IVarKind } from '../../types/compiler';
@@ -14,11 +14,14 @@ import {
   compareVariableTypes,
   mirrorAnonNameInComplexTypes,
 } from '../utils/codegenResolverUtils';
+import { logFactory } from '../utils/fileOps';
 import { loopNamedNodeChild } from '../utils/iterators';
 
 import { visitArray, visitObject } from './arrayObjectResolver';
 import Resolver from './index';
 import { visitTypeAnnotation } from './typeResolver';
+
+const log = logFactory(__filename);
 
 type SubResolverReturnType = {
   nameNode: DestructuringPatternNode | IdentifierNode;
@@ -48,9 +51,13 @@ function resolveUntypedVarDecl(
     }
   } else if (valueNode != null) {
     // Initializer included: let a = 1; let b = a; let c = "string";
-    if (valueNode.type == 'array') visitArray(resolver, valueNode, true);
-    else if (valueNode.type == 'object') visitObject(resolver, valueNode, true);
-    else resolver.visit(valueNode);
+    if (valueNode.type == 'array') {
+      visitArray(resolver, valueNode, true);
+    } else if (valueNode.type == 'object') {
+      visitObject(resolver, valueNode, true);
+    } else {
+      resolver.visit(valueNode);
+    }
     variableType = valueNode.variableType;
     if (valueNode.subVariableType) subVariableType = valueNode.subVariableType;
   }
@@ -73,7 +80,13 @@ function resolveTypedVarDec(
   let subVariableType: SubVariableType | null = null;
 
   if (valueNode && typeNode) {
-    resolver.visit(valueNode);
+    if (valueNode.type == 'array') {
+      visitArray(resolver, valueNode, true);
+    } else if (valueNode.type == 'object') {
+      visitObject(resolver, valueNode, true);
+    } else {
+      resolver.visit(valueNode);
+    }
 
     const generatorMod =
       valueNode.variableType == 'array' && valueNode.namedChildCount == 0;
@@ -94,8 +107,6 @@ function resolveTypedVarDec(
         duplicates.forEach((dup) => delete resolver._generators[dup]);
       }
     }
-
-    // console.log(typeSubVarType, valSubVarType)
 
     if (
       valVarType == 'array' &&

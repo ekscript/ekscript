@@ -216,7 +216,6 @@ export function generateTypeDefs(name: string): string {
 export function generateFromGenerators(
   generators: Record<string, SubVariableType>
 ) {
-  console.log(Object.keys(generators));
   const arr: string[] = [];
 
   for (const key in generators)

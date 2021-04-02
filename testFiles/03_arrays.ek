@@ -1,6 +1,5 @@
-// this is my language - ekscript
 let arr1 = [1, 2];
 let arr = [[1], arr1]; // int[][]
-let arr3 = [arr];
+let arr3 = [arr]; // int[][][]
 let arr2 = ["hello", "yo"]; // string[]
-let arr4: string[][] = [];
+let arr4: string[][] = [arr2];

@@ -32,25 +32,25 @@ test.todo('placeholder');
 //   );
 // });
 
-test('Basic expressions & literals - I', (t) => {
-  const [genCode, cFile] = getFileCodes('basicexprlit1');
-  t.is(genCode, cFile);
-});
+// test('Basic expressions & literals - I', (t) => {
+//   const [genCode, cFile] = getFileCodes('basicexprlit1');
+//   t.is(genCode, cFile);
+// });
 
-test('While, For, Switch', (t) => {
-  const [genCode, cFile] = getFileCodes('02_while_switch_for');
-  t.is(genCode, cFile);
-});
+// test('While, For, Switch', (t) => {
+//   const [genCode, cFile] = getFileCodes('02_while_switch_for');
+//   t.is(genCode, cFile);
+// });
 
 test('Array Codegen', (t) => {
   const [genCode, cFile] = getFileCodes('03_arrays');
   t.is(genCode, cFile);
 });
 
-test('Objects', (t) => {
-  const [genCode, cFile] = getFileCodes('04_objects');
-  t.is(genCode, cFile);
-});
+// test('Objects', (t) => {
+//   const [genCode, cFile] = getFileCodes('04_objects');
+//   t.is(genCode, cFile);
+// });
 
 // test('Type definition Test', (t) => {
 //   const [genCode, cFile] = getFileCodes('05_typedef');
