@@ -31,7 +31,7 @@ export default class Compiler {
 
   private _tree: Tree | null = null;
 
-  private generators: Record<string, SubVariableType> = {};
+  private generators: Map<string, SubVariableType> = new Map();
 
   constructor(
     entry: TCompilerSource,

@@ -1,4 +1,4 @@
-import { int } from '../../global.d';
+import { int } from '../../global';
 import { TCompilerError } from '../../types/compiler';
 
 export enum TCompilerErrorType {

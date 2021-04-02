@@ -104,7 +104,7 @@ function resolveTypedVarDec(
           typeSubVarType,
           (child as ValueNode).subVariableType
         );
-        duplicates.forEach((dup) => delete resolver._generators[dup]);
+        duplicates.forEach((dup) => resolver._generators.delete(dup));
       }
     }
 

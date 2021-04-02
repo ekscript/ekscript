@@ -79,7 +79,7 @@ export function visitArrayType(
   if (generator) {
     const typeAlias = `anon_array${resolver.counter++}`;
     node.subVariableType.typeAlias = typeAlias;
-    resolver._generators[typeAlias] = node.subVariableType;
+    resolver._generators.set(typeAlias, node.subVariableType);
   }
 
   switch (mainType.type) {

@@ -47,12 +47,12 @@ test('Array Codegen', (t) => {
   t.is(genCode, cFile);
 });
 
-// test('Objects', (t) => {
-//   const [genCode, cFile] = getFileCodes('04_objects');
-//   t.is(genCode, cFile);
-// });
+test('Objects', (t) => {
+  const [genCode, cFile] = getFileCodes('04_objects');
+  t.is(genCode, cFile);
+});
 
-// test('Type definition Test', (t) => {
-//   const [genCode, cFile] = getFileCodes('05_typedef');
-//   t.is(genCode, cFile);
-// });
+test('Type definition Test', (t) => {
+  const [genCode, cFile] = getFileCodes('05_typedef');
+  t.is(genCode, cFile);
+});

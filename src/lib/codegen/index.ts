@@ -97,7 +97,7 @@ class CodeGen implements Visitor<SyntaxNode> {
     private ast: Tree,
     private errors: TCompilerError[] = [],
     private warnings: TCompilerError[] = [],
-    private generators: Record<string, SubVariableType> = {}
+    private generators: Map<string, SubVariableType>
   ) {
     this.currentScope = this.ast.rootNode as ScopeContainer;
   }

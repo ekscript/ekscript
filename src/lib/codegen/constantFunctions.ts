@@ -213,19 +213,31 @@ export function generateTypeDefs(name: string): string {
   return `typedef struct _${name} ${name};`;
 }
 
+function removeDuplicates(gens: Map<string, SubVariableType>) {
+  for (const [key, value] of gens) {
+    if (value.typeAlias) {
+      if (gens.get(value.typeAlias) && key != value.typeAlias) {
+        gens.delete(key);
+      }
+    }
+  }
+}
+
 export function generateFromGenerators(
-  generators: Record<string, SubVariableType>
+  generators: Map<string, SubVariableType>
 ) {
+  // removeDuplicates(generators);
+
   const arr: string[] = [];
 
-  for (const key in generators)
-    arr.push(generateTypeDefs(generators[key].typeAlias!));
+  for (const [_, value] of generators) {
+    arr.push(generateTypeDefs(value?.typeAlias!));
+  }
 
-  for (const key in generators) {
-    const subVarType = generators[key];
-    if (subVarType.variableType == 'object') {
-      arr.push(generateObjectUtils(subVarType.typeAlias!, subVarType));
-    } else if (subVarType.variableType == 'array') {
+  for (const [key, subVarType] of generators) {
+    if (subVarType?.variableType == 'object') {
+      arr.push(generateObjectUtils(subVarType?.typeAlias!, subVarType));
+    } else if (subVarType?.variableType == 'array') {
       if (subVarType?.subTypes) {
         let subType = subVarType?.subTypes[0];
         if (typeof subType != 'string' && subType.typeAlias) {
